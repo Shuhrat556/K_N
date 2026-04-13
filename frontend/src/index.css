@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-mist text-ink-900 font-sans;
+  font-size: clamp(15px, 0.35vw + 14px, 18px);
+  background-image:
+    radial-gradient(1200px 600px at 10% -10%, rgba(99, 102, 241, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(14, 165, 233, 0.16), transparent 50%),
+    radial-gradient(700px 400px at 50% 110%, rgba(16, 185, 129, 0.12), transparent 55%);
+}
+
+/* Content width: comfortable on phones, uses space on desktop */
+.page-shell {
+  @apply mx-auto w-full px-4 sm:px-6 lg:px-10 xl:px-12;
+  max-width: min(100%, 28rem);
+  padding-top: max(1.25rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  .page-shell {
+    max-width: min(100%, 40rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-shell {
+    max-width: min(100%, 52rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .page-shell {
+    max-width: min(100%, 60rem);
+  }
+}
+
+@media (min-width: 1536px) {
+  .page-shell {
+    max-width: min(100%, 68rem);
+  }
+}

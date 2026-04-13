@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kasbnoma
+      POSTGRES_PASSWORD: kasbnoma
+      POSTGRES_DB: kasbnoma
+    ports:
+      - "5432:5432"
+    volumes:
+      - kasbnoma_pg:/var/lib/postgresql/data
+
+volumes:
+  kasbnoma_pg:
