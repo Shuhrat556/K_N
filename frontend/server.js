@@ -14,9 +14,11 @@ const staticDir = existsSync(publicDir) ? publicDir : distDir;
 
 app.use(express.static(staticDir));
 
-app.get("*", (_req, res) => {
-  const indexPath = path.join(staticDir, "index.html");
-  res.sendFile(indexPath);
+// SPA fallback: Express 5 rejects `app.get("*")` with path-to-regexp v8+.
+// `express.static` calls `next()` when a file isn't found, so this handler serves `index.html`
+// for client-side routes while still allowing real static assets to resolve first.
+app.use((_req, res) => {
+  res.sendFile(path.join(staticDir, "index.html"));
 });
 
 app.listen(port, "0.0.0.0", () => {
