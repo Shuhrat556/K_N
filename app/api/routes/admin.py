@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -34,7 +36,7 @@ def create_cluster(body: ClusterIn, db: Session = Depends(get_db)):
 
 
 @router.get("/groups", response_model=list[GroupOut])
-def list_groups(cluster_id: int | None = Query(default=None), db: Session = Depends(get_db)):
+def list_groups(cluster_id: Optional[int] = Query(default=None), db: Session = Depends(get_db)):
     stmt = select(Group)
     if cluster_id is not None:
         stmt = stmt.where(Group.cluster_id == cluster_id)
@@ -67,7 +69,7 @@ def create_group(body: GroupIn, db: Session = Depends(get_db)):
 
 @router.get("/questions", response_model=list[QuestionOut])
 def list_questions(
-    phase: QuestionPhase | None = Query(default=None),
+    phase: Optional[QuestionPhase] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
