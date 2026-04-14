@@ -39,9 +39,16 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
-    origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    # CORS must be registered early so it wraps all routes/middleware added after it.
+    # Origins are controlled via `CORS_ORIGINS` (comma-separated). Example:
+    # CORS_ORIGINS=https://k-n-7.onrender.com,http://localhost:5173
+    origins = [o.strip().rstrip("/") for o in settings.cors_origins.split(",") if o.strip()]
     if not origins:
-        origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+        origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://k-n-7.onrender.com",
+        ]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
