@@ -3,6 +3,7 @@ import type {
   AdminCluster,
   AdminGroup,
   AdminQuestion,
+  AdminQuestionUpdate,
   MainQuestion,
   ReadinessQuestion,
   ReadinessKind,
@@ -84,7 +85,7 @@ export async function createAdminGroup(payload: {
 
 export async function fetchAdminQuestions(phase?: QuestionPhase): Promise<AdminQuestion[]> {
   const { data } = await api.get<AdminQuestion[]>("/admin/questions", {
-    params: phase ? { phase } : undefined,
+    params: { limit: 500, ...(phase ? { phase } : {}) },
   });
   return data;
 }
@@ -97,7 +98,14 @@ export async function createAdminQuestion(payload: {
   cluster_id?: number | null;
   group_id?: number | null;
   sort_order: number;
+  option_labels?: string[] | null;
+  option_labels_tj?: string[] | null;
 }): Promise<AdminQuestion> {
   const { data } = await api.post<AdminQuestion>("/admin/questions", payload);
+  return data;
+}
+
+export async function updateAdminQuestion(id: number, payload: AdminQuestionUpdate): Promise<AdminQuestion> {
+  const { data } = await api.patch<AdminQuestion>(`/admin/questions/${id}`, payload);
   return data;
 }

@@ -9,7 +9,7 @@ import { ProgressBar } from "../components/ProgressBar";
 import { QuestionCard } from "../components/QuestionCard";
 import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
-import { pickQuestionText } from "../utils/questionText";
+import { pickOptionLabel, pickQuestionText } from "../utils/questionText";
 import { shuffled } from "../utils/shuffle";
 
 type OutcomeView = "quiz" | "summary";
@@ -57,6 +57,15 @@ export function Readiness() {
   const qText = (q: ReadinessQuestion) => pickQuestionText(q, lang);
 
   const labels = useMemo(() => {
+    const L = current?.option_labels;
+    const LTj = current?.option_labels_tj;
+    if (L && L.length >= 3) {
+      const base = [0, 1, 2].map((i) => ({
+        v: i,
+        l: pickOptionLabel(lang, L[i] ?? "", LTj?.[i]),
+      }));
+      return shuffled(base);
+    }
     const kind: ReadinessKind | undefined = current?.kind;
     if (kind === "emotional") {
       return shuffled([
@@ -70,7 +79,7 @@ export function Readiness() {
       { v: 1, l: t(lang, "partly") },
       { v: 2, l: t(lang, "no") },
     ]);
-  }, [current?.id, current?.kind, lang]);
+  }, [current?.id, current?.kind, current?.option_labels, current?.option_labels_tj, lang]);
 
   const tone = useMemo(() => {
     const o = serverOutcome?.outcome;

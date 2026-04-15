@@ -80,15 +80,6 @@ export function Landing() {
               >
                 {t(lang, "landing_faq_link")}
               </motion.a>
-              <motion.button
-                type="button"
-                onClick={() => navigate("/admin")}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.985 }}
-                className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-6 py-3 text-sm font-extrabold text-white shadow-card"
-              >
-                Админ
-              </motion.button>
             </div>
             {bootError ? <div className="mt-4 text-sm font-semibold text-rose-700">{bootError}</div> : null}
           </motion.div>

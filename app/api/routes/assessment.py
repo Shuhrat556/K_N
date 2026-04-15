@@ -38,7 +38,15 @@ def readiness_questions(
     try:
         qs = svc.readiness_questions(user_id)
         return [
-            ReadinessQuestionOut(id=q.id, text=q.text, text_tj=q.text_tj, kind=q.readiness_kind) for q in qs
+            ReadinessQuestionOut(
+                id=q.id,
+                text=q.text,
+                text_tj=q.text_tj,
+                kind=q.readiness_kind,
+                option_labels=q.option_labels,
+                option_labels_tj=q.option_labels_tj,
+            )
+            for q in qs
         ]
     except TestFlowError as e:
         raise _handle_domain(e) from e
@@ -64,7 +72,13 @@ def questions(
     try:
         qs = svc.main_questions(user_id)
         return [
-            TestQuestionOut(id=q.id, text=q.text, text_tj=q.text_tj)
+            TestQuestionOut(
+                id=q.id,
+                text=q.text,
+                text_tj=q.text_tj,
+                option_labels=q.option_labels,
+                option_labels_tj=q.option_labels_tj,
+            )
             for q in qs
             if q.phase == QuestionPhase.MAIN
         ]

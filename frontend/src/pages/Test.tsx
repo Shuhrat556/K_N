@@ -11,7 +11,7 @@ import { ProgressBar } from "../components/ProgressBar";
 import { QuestionCard } from "../components/QuestionCard";
 import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
-import { pickQuestionText } from "../utils/questionText";
+import { pickOptionLabel, pickQuestionText } from "../utils/questionText";
 import { shuffled } from "../utils/shuffle";
 
 export function Test() {
@@ -71,6 +71,15 @@ export function Test() {
   const qText = (q: MainQuestion) => pickQuestionText(q, lang);
 
   const likert = useMemo(() => {
+    const L = current?.option_labels;
+    const LTj = current?.option_labels_tj;
+    if (L && L.length >= 5) {
+      const base = [0, 1, 2, 3, 4].map((i) => ({
+        v: i,
+        l: pickOptionLabel(lang, L[i] ?? "", LTj?.[i]),
+      }));
+      return shuffled(base);
+    }
     const labels = [
       { v: 0, l: t(lang, "likert_0") },
       { v: 1, l: t(lang, "likert_1") },
@@ -79,7 +88,7 @@ export function Test() {
       { v: 4, l: t(lang, "likert_4") },
     ];
     return shuffled(labels);
-  }, [current?.id, lang]);
+  }, [current?.id, current?.option_labels, current?.option_labels_tj, lang]);
 
   const finalizeBattery = useCallback(async () => {
     if (!userId) return;

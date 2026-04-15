@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Enum, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -68,6 +68,9 @@ class Question(Base):
     cluster_id: Mapped[Optional[int]] = mapped_column(ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True)
     group_id: Mapped[Optional[int]] = mapped_column(ForeignKey("groups.id", ondelete="SET NULL"), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Optional per-question answer labels: length 3 (readiness) or 5 (main / Likert 0..4 order).
+    option_labels: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    option_labels_tj: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
     cluster: Mapped[Optional["Cluster"]] = relationship(back_populates="questions")
     group: Mapped[Optional["Group"]] = relationship(back_populates="questions")

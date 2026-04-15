@@ -19,3 +19,11 @@ export function pickPrimaryQuestionText(q: WithTexts): string {
   const fallback = (q.text_tj ?? "").trim();
   return primary || fallback;
 }
+
+/** RU → primary label; TJ (`tg`) → alt with fallback to primary. */
+export function pickOptionLabel(lang: Lang, primary: string, alt?: string | null): string {
+  const p = (primary ?? "").trim();
+  const a = (alt ?? "").trim();
+  if (lang === "tg") return a || p;
+  return p || a;
+}

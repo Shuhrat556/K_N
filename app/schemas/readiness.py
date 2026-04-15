@@ -13,6 +13,9 @@ class ReadinessQuestionOut(BaseModel):
     text: str
     text_tj: Optional[str] = None
     kind: ReadinessKind
+    # When set, length 3: labels for choice_index 0,1,2 (yes/partly/no or happy/uncertain/fear).
+    option_labels: Optional[list[str]] = None
+    option_labels_tj: Optional[list[str]] = None
 
     model_config = {"from_attributes": True}
 

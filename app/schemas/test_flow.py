@@ -34,6 +34,9 @@ class TestQuestionOut(BaseModel):
     id: int
     text: str
     text_tj: Optional[str] = None
+    # When set, length 5: Likert labels for values 0..4.
+    option_labels: Optional[list[str]] = None
+    option_labels_tj: Optional[list[str]] = None
 
 
 class SubmitAnswerIn(BaseModel):

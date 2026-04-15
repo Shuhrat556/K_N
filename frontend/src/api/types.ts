@@ -6,12 +6,16 @@ export type ReadinessQuestion = {
   text: string;
   text_tj?: string | null;
   kind: ReadinessKind;
+  option_labels?: string[] | null;
+  option_labels_tj?: string[] | null;
 };
 
 export type MainQuestion = {
   id: number;
   text: string;
   text_tj?: string | null;
+  option_labels?: string[] | null;
+  option_labels_tj?: string[] | null;
 };
 
 export type StartTestResponse = {
@@ -90,4 +94,17 @@ export type AdminQuestion = {
   cluster_id?: number | null;
   group_id?: number | null;
   sort_order: number;
+  option_labels?: string[] | null;
+  option_labels_tj?: string[] | null;
+};
+
+export type AdminQuestionUpdate = {
+  text?: string;
+  text_tj?: string | null;
+  readiness_kind?: ReadinessKind | null;
+  cluster_id?: number | null;
+  group_id?: number | null;
+  sort_order?: number;
+  option_labels?: string[] | null;
+  option_labels_tj?: string[] | null;
 };

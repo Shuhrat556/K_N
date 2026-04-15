@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.catalog import QuestionPhase, ReadinessKind
 
@@ -35,6 +35,16 @@ class GroupOut(BaseModel):
     sort_order: int
 
 
+def validate_option_labels_for_phase(phase: QuestionPhase, labels: Optional[list], labels_tj: Optional[list]) -> None:
+    n = 3 if phase == QuestionPhase.READINESS else 5
+    if labels is not None:
+        if not isinstance(labels, list) or len(labels) != n or not all(isinstance(x, str) for x in labels):
+            raise ValueError(f"option_labels must be a list of {n} strings for phase={phase.value}")
+    if labels_tj is not None:
+        if not isinstance(labels_tj, list) or len(labels_tj) != n or not all(isinstance(x, str) for x in labels_tj):
+            raise ValueError(f"option_labels_tj must be a list of {n} strings for phase={phase.value}")
+
+
 class QuestionIn(BaseModel):
     phase: QuestionPhase
     text: str = Field(min_length=1)
@@ -43,6 +53,33 @@ class QuestionIn(BaseModel):
     cluster_id: Optional[int] = None
     group_id: Optional[int] = None
     sort_order: int = 0
+    option_labels: Optional[list[str]] = None
+    option_labels_tj: Optional[list[str]] = None
+
+    @model_validator(mode="after")
+    def _labels_match_phase(self):
+        validate_option_labels_for_phase(self.phase, self.option_labels, self.option_labels_tj)
+        return self
+
+
+class QuestionUpdate(BaseModel):
+    text: Optional[str] = Field(default=None, min_length=1)
+    text_tj: Optional[str] = None
+    readiness_kind: Optional[ReadinessKind] = None
+    cluster_id: Optional[int] = None
+    group_id: Optional[int] = None
+    sort_order: Optional[int] = None
+    option_labels: Optional[list[str]] = None
+    option_labels_tj: Optional[list[str]] = None
+
+    @model_validator(mode="after")
+    def _labels_lengths(self):
+        # Length is validated in route against existing row.phase when applying.
+        if self.option_labels is not None and not all(isinstance(x, str) for x in self.option_labels):
+            raise ValueError("option_labels must be a list of strings")
+        if self.option_labels_tj is not None and not all(isinstance(x, str) for x in self.option_labels_tj):
+            raise ValueError("option_labels_tj must be a list of strings")
+        return self
 
 
 class QuestionOut(BaseModel):
@@ -54,3 +91,5 @@ class QuestionOut(BaseModel):
     cluster_id: Optional[int] = None
     group_id: Optional[int] = None
     sort_order: int
+    option_labels: Optional[list[str]] = None
+    option_labels_tj: Optional[list[str]] = None
