@@ -210,30 +210,30 @@ export function Landing() {
         />
         <div className="pointer-events-none absolute -left-32 top-0 h-[420px] w-[420px] rounded-full bg-sky-400/25 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 bottom-0 h-[380px] w-[380px] rounded-full bg-indigo-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-brand-navy-deep/90 via-brand-navy/40 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-brand-navy-deep/90 via-brand-navy/40 to-transparent dark:from-brand-navy-deep/90 dark:via-brand-navy/40" />
 
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-10 sm:gap-12 sm:px-6 sm:pb-24 sm:pt-14 lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-10 lg:pt-16">
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="order-2 text-white lg:order-1"
+            className="order-2 rounded-3xl border border-slate-200/60 bg-white/55 p-6 text-brand-navy shadow-sm ring-1 ring-white/60 backdrop-blur-md dark:border-transparent dark:bg-transparent dark:p-0 dark:text-white dark:shadow-none dark:ring-0 lg:order-1"
           >
             <motion.div
-              className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white/95 ring-1 ring-white/25 backdrop-blur-md"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs font-bold text-brand-navy shadow-sm ring-1 ring-slate-100 backdrop-blur-sm dark:border-transparent dark:bg-white/15 dark:text-white/95 dark:shadow-none dark:ring-white/25"
               animate={reduce ? undefined : { boxShadow: ["0 0 0 0 rgba(255,255,255,0)", "0 0 0 10px rgba(255,255,255,0.06)", "0 0 0 0 rgba(255,255,255,0)"] }}
               transition={{ duration: 2.8, repeat: Infinity }}
             >
-              <IconSpark className="h-4 w-4 text-amber-300" />
+              <IconSpark className="h-4 w-4 text-amber-600 dark:text-amber-300" />
               {t(lang, "landing_kicker")}
             </motion.div>
-            <h1 className="mt-5 text-balance text-3xl font-extrabold leading-[1.12] tracking-tight sm:text-4xl md:text-5xl lg:text-[2.75rem]">
+            <h1 className="mt-5 text-balance text-3xl font-extrabold leading-[1.12] tracking-tight text-slate-900 sm:text-4xl md:text-5xl lg:text-[2.75rem] dark:text-white">
               {t(lang, "landing_title")}
             </h1>
-            <p className="mt-5 max-w-xl text-pretty text-base font-medium leading-relaxed text-white/85 sm:text-lg">
+            <p className="mt-5 max-w-xl text-pretty text-base font-medium leading-relaxed text-slate-700 sm:text-lg dark:text-white/85">
               {t(lang, "landing_sub")}
             </p>
-            <p className="mt-3 text-sm font-medium text-white/65">{t(lang, "landing_note")}</p>
+            <p className="mt-3 text-sm font-medium text-slate-600 dark:text-white/65">{t(lang, "landing_note")}</p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <motion.button
@@ -249,12 +249,14 @@ export function Landing() {
               <motion.a
                 href="#about"
                 whileHover={{ y: -1 }}
-                className="inline-flex min-h-[2.75rem] items-center justify-center rounded-2xl border border-white/35 bg-white/10 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-sm transition hover:bg-white/15"
+                className="inline-flex min-h-[2.75rem] items-center justify-center rounded-2xl border border-slate-300/90 bg-white/80 px-6 py-3 text-sm font-extrabold text-brand-navy shadow-sm backdrop-blur-sm transition hover:bg-white dark:border-white/35 dark:bg-white/10 dark:text-white dark:shadow-none dark:hover:bg-white/15"
               >
                 {t(lang, "landing_faq_link")}
               </motion.a>
             </div>
-            {bootError ? <div className="mt-4 text-sm font-semibold text-amber-200">{bootError}</div> : null}
+            {bootError ? (
+              <div className="mt-4 text-sm font-semibold text-rose-700 dark:text-amber-200">{bootError}</div>
+            ) : null}
           </motion.div>
 
           <motion.div
@@ -265,11 +267,11 @@ export function Landing() {
           >
             <div className="relative mx-auto max-w-lg lg:max-w-none">
               <motion.div
-                className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-white/25 to-white/5 blur-2xl"
+                className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-slate-200/40 to-sky-100/30 blur-2xl dark:from-white/25 dark:to-white/5"
                 animate={reduce ? undefined : { opacity: [0.5, 0.85, 0.5] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               />
-              <div className="relative rounded-[1.75rem] bg-white/10 p-4 ring-1 ring-white/25 backdrop-blur-md sm:p-6">
+              <div className="relative rounded-[1.75rem] border border-slate-200/70 bg-white/70 p-4 shadow-lg shadow-slate-900/5 ring-1 ring-white/80 backdrop-blur-md dark:border-transparent dark:bg-white/10 dark:shadow-none dark:ring-white/25 sm:p-6">
                 <Illustration className="mx-auto w-full max-w-md drop-shadow-2xl sm:max-w-lg" />
               </div>
             </div>
