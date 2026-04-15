@@ -1,7 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Illustration } from "../components/Illustration";
+import { BrandLogo } from "../components/BrandLogo";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
@@ -119,14 +119,12 @@ export function Landing() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-navy to-sky-600 text-sm font-black text-white shadow-md sm:h-11 sm:w-11">
-              K
-            </div>
+            <BrandLogo variant="header" className="rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-600/50" />
             <div className="min-w-0">
-              <div className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 sm:text-xs">
-                {t(lang, "brand")}
+              <div className="truncate text-brand-mark-3d">{t(lang, "brand")}</div>
+              <div className="truncate text-xs text-brand-navy dark:text-sky-200 sm:text-sm">
+                <span className="text-submark-3d">{t(lang, "landing_kicker")}</span>
               </div>
-              <div className="truncate text-xs font-extrabold text-brand-navy dark:text-sky-200 sm:text-sm">{t(lang, "landing_kicker")}</div>
             </div>
           </motion.div>
 
@@ -227,7 +225,7 @@ export function Landing() {
               <IconSpark className="h-4 w-4 text-amber-600 dark:text-amber-300" />
               {t(lang, "landing_kicker")}
             </motion.div>
-            <h1 className="mt-5 text-balance text-3xl font-extrabold leading-[1.12] tracking-tight text-slate-900 sm:text-4xl md:text-5xl lg:text-[2.75rem] dark:text-white">
+            <h1 className="mt-5 text-balance font-display text-3xl leading-[1.12] text-hero-3d sm:text-4xl md:text-5xl lg:text-[2.75rem]">
               {t(lang, "landing_title")}
             </h1>
             <p className="mt-5 max-w-xl text-pretty text-base font-medium leading-relaxed text-slate-700 sm:text-lg dark:text-white/85">
@@ -271,8 +269,8 @@ export function Landing() {
                 animate={reduce ? undefined : { opacity: [0.5, 0.85, 0.5] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               />
-              <div className="relative rounded-[1.75rem] border border-slate-200/70 bg-white/70 p-4 shadow-lg shadow-slate-900/5 ring-1 ring-white/80 backdrop-blur-md dark:border-transparent dark:bg-white/10 dark:shadow-none dark:ring-white/25 sm:p-6">
-                <Illustration className="mx-auto w-full max-w-md drop-shadow-2xl sm:max-w-lg" />
+              <div className="relative rounded-[1.75rem] border border-slate-200/70 bg-white/70 p-5 shadow-lg shadow-slate-900/5 ring-1 ring-white/80 backdrop-blur-md dark:border-transparent dark:bg-white/10 dark:shadow-none dark:ring-white/25 sm:p-8">
+                <BrandLogo variant="hero" className="flex justify-center" />
               </div>
             </div>
           </motion.div>
@@ -352,13 +350,9 @@ export function Landing() {
           >
             <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-coral/10 blur-2xl" />
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-              <motion.div
-                className="mx-auto grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-navy to-sky-600 text-xl font-black text-white shadow-lg sm:mx-0 sm:h-24 sm:w-24 sm:text-2xl"
-                animate={reduce ? undefined : { scale: [1, 1.03, 1] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                K
-              </motion.div>
+              <div className="mx-auto shrink-0 rounded-full bg-white/90 p-2 shadow-lg ring-1 ring-slate-200/80 dark:bg-slate-800/90 dark:ring-slate-600 sm:mx-0">
+                <BrandLogo variant="testimonial" className="rounded-full" />
+              </div>
               <div>
                 <div className="flex gap-0.5 text-brand-coral" aria-hidden>
                   {[1, 2, 3, 4].map((k) => (
@@ -381,9 +375,9 @@ export function Landing() {
       <footer id="contacts" className="scroll-mt-24 bg-gradient-to-b from-brand-navy-deep to-brand-navy text-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:flex-row sm:items-start sm:justify-between sm:px-6 lg:px-10">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-sm font-black">K</div>
-              <span className="text-sm font-extrabold">{t(lang, "brand")}</span>
+            <div className="flex items-center gap-3">
+              <BrandLogo variant="footer" className="rounded-xl bg-white/10 p-0.5 ring-1 ring-white/20" />
+              <span className="font-display text-sm font-extrabold tracking-tight text-white drop-shadow-md">{t(lang, "brand")}</span>
             </div>
             <p className="mt-3 max-w-xs text-sm font-medium leading-relaxed text-white/70">{t(lang, "landing_sub")}</p>
           </div>

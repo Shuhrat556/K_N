@@ -69,3 +69,66 @@ html.dark body {
     max-width: min(100%, 68rem);
   }
 }
+
+/* 3D-style display headings (Outfit + layered shadow) */
+@layer components {
+  .text-hero-3d {
+    font-family: Outfit, Inter, system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    text-shadow:
+      0 1px 0 rgb(255 255 255 / 0.9),
+      0 2px 0 #e2e8f0,
+      0 3px 0 #cbd5e1,
+      0 4px 0 #94a3b8,
+      0 8px 22px rgb(15 23 42 / 0.22);
+  }
+
+  .dark .text-hero-3d {
+    color: #f8fafc;
+    text-shadow:
+      0 1px 0 rgb(148 163 184 / 0.35),
+      0 2px 0 #334155,
+      0 3px 0 #1e293b,
+      0 4px 0 #0f172a,
+      0 10px 28px rgb(0 0 0 / 0.5);
+  }
+
+  .text-brand-mark-3d {
+    font-family: Outfit, Inter, system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.625rem;
+    color: #0f2744;
+    text-shadow:
+      0 1px 0 rgb(255 255 255 / 0.85),
+      0 2px 0 #cbd5e1,
+      0 4px 12px rgb(15 39 68 / 0.2);
+  }
+
+  @media (min-width: 640px) {
+    .text-brand-mark-3d {
+      font-size: 0.75rem;
+    }
+  }
+
+  .dark .text-brand-mark-3d {
+    color: #e2e8f0;
+    text-shadow:
+      0 1px 0 rgb(51 65 85 / 0.5),
+      0 2px 0 #0f172a,
+      0 5px 16px rgb(0 0 0 / 0.35);
+  }
+
+  .text-submark-3d {
+    font-family: Outfit, Inter, system-ui, sans-serif;
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgb(255 255 255 / 0.65), 0 2px 10px rgb(15 39 68 / 0.12);
+  }
+
+  .dark .text-submark-3d {
+    text-shadow: 0 1px 0 rgb(30 41 59 / 0.45), 0 2px 12px rgb(0 0 0 / 0.35);
+  }
+}
