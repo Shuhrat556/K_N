@@ -5,6 +5,8 @@ type Dict = Record<string, string>;
 const ru: Dict = {
   lang_ru: "Русский",
   lang_tg: "Тоҷикӣ",
+  theme_light: "Светлая тема",
+  theme_dark: "Тёмная тема",
   brand: "Kasbnoma",
   landing_kicker: "Профессиональная диагностика",
   landing_title: "Помощник по выбору карьеры",
@@ -140,6 +142,8 @@ const ru: Dict = {
 const tg: Dict = {
   lang_ru: "Русӣ",
   lang_tg: "Тоҷикӣ",
+  theme_light: "Рӯшноӣ",
+  theme_dark: "Торикӣ",
   brand: "Kasbnoma",
   landing_kicker: "Диагностикаи касбӣ",
   landing_title: "Ёрдамчӣ барои интихоби касб",

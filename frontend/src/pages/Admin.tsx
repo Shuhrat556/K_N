@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
+import { ThemeToggle } from "../components/ThemeToggle";
 import {
   createAdminCluster,
   createAdminGroup,
@@ -62,8 +63,9 @@ export function Admin() {
   const [saving, setSaving] = useState(false);
 
   const inputClass =
-    "w-full rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-medium text-ink-900 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100";
-  const sectionCardClass = "rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur";
+    "w-full rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-medium text-ink-900 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-950/60";
+  const sectionCardClass =
+    "rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80";
 
   const groupsForSelectedCluster = useMemo(
     () => groups.filter((g) => g.cluster_id === questionClusterId),
@@ -275,31 +277,32 @@ export function Admin() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur"
+        className="relative overflow-hidden rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80"
       >
         <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-indigo-300/30 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-sky-300/30 blur-2xl" />
 
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-indigo-700/80">Kasbnoma</div>
-            <div className="mt-1 text-2xl font-extrabold text-ink-900">Админ-панель</div>
-            <p className="mt-2 text-sm font-medium text-ink-700">
-              Откройте по адресу <span className="font-mono text-ink-900">/admin</span>. Категории, подкатегории, вопросы
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-indigo-700/80 dark:text-indigo-300/90">Kasbnoma</div>
+            <div className="mt-1 text-2xl font-extrabold text-ink-900 dark:text-slate-50">Админ-панель</div>
+            <p className="mt-2 text-sm font-medium text-ink-700 dark:text-slate-300">
+              Откройте по адресу <span className="font-mono text-ink-900 dark:text-slate-100">/admin</span>. Категории, подкатегории, вопросы
               и подписи вариантов.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle />
             <Link
               to="/"
-              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-indigo-800 ring-1 ring-indigo-200/80 transition hover:-translate-y-0.5 hover:shadow-card"
+              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-indigo-800 ring-1 ring-indigo-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-indigo-950/50 dark:text-indigo-100 dark:ring-indigo-800/60"
             >
               На главную
             </Link>
             <button
               type="button"
               onClick={() => void loadAll()}
-              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-ink-900 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card"
+              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-ink-900 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
             >
               Обновить
             </button>
@@ -308,7 +311,7 @@ export function Admin() {
 
         <div className="relative mt-4 flex flex-wrap items-center gap-2">
           {busy ? (
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-ink-700 ring-1 ring-slate-200/80">
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-ink-700 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600">
               Загрузка...
             </span>
           ) : null}
@@ -319,7 +322,7 @@ export function Admin() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/80"
+                className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/50"
               >
                 {message}
               </motion.span>
@@ -332,7 +335,7 @@ export function Admin() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-200/80"
+                className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-900/50"
               >
                 {error}
               </motion.span>
@@ -347,26 +350,26 @@ export function Admin() {
         transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className={`mt-6 ${sectionCardClass}`}
       >
-        <h2 className="text-lg font-extrabold text-ink-900">Категории и подкатегории (просмотр)</h2>
+        <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Категории и подкатегории (просмотр)</h2>
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500">Кластеры</div>
-            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm font-medium text-ink-800">
+            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Кластеры</div>
+            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
               {clusters.map((c) => (
-                <li key={c.id} className="rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70">
-                  <span className="font-mono text-xs text-ink-500">{c.code}</span> · {c.name}{" "}
-                  <span className="text-ink-500">sort {c.sort_order}</span>
+                <li key={c.id} className="rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
+                  <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{c.code}</span> · {c.name}{" "}
+                  <span className="text-ink-500 dark:text-slate-400">sort {c.sort_order}</span>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500">Группы</div>
-            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm font-medium text-ink-800">
+            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Группы</div>
+            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
               {groups.map((g) => (
-                <li key={g.id} className="rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70">
-                  <span className="font-mono text-xs text-ink-500">{g.code}</span> · {g.name}{" "}
-                  <span className="text-ink-500">cluster {g.cluster_id}</span>
+                <li key={g.id} className="rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
+                  <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{g.code}</span> · {g.name}{" "}
+                  <span className="text-ink-500 dark:text-slate-400">cluster {g.cluster_id}</span>
                 </li>
               ))}
             </ul>
@@ -381,7 +384,7 @@ export function Admin() {
         className="mt-6 grid gap-6 lg:grid-cols-2"
       >
         <form className={sectionCardClass} onSubmit={onCreateCluster}>
-          <h2 className="text-lg font-extrabold text-ink-900">Добавить категорию (кластер)</h2>
+          <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить категорию (кластер)</h2>
           <div className="mt-4 space-y-3">
             <input
               className={inputClass}
@@ -416,7 +419,7 @@ export function Admin() {
         </form>
 
         <form className={sectionCardClass} onSubmit={onCreateGroup}>
-          <h2 className="text-lg font-extrabold text-ink-900">Добавить подкатегорию (группу)</h2>
+          <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить подкатегорию (группу)</h2>
           <div className="mt-4 space-y-3">
             <select
               className={inputClass}
@@ -470,10 +473,10 @@ export function Admin() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="mt-6 rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur"
+        className="mt-6 rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80"
         onSubmit={onCreateQuestion}
       >
-        <h2 className="text-lg font-extrabold text-ink-900">Добавить вопрос</h2>
+        <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить вопрос</h2>
         <select className={`mt-4 ${inputClass}`} value={questionPhase} onChange={(e) => setQuestionPhase(e.target.value as QuestionPhase)}>
           <option value="readiness">Готовность</option>
           <option value="main">Основной блок</option>
@@ -576,8 +579,8 @@ export function Admin() {
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-extrabold text-ink-900">Вопросы</h2>
-            <p className="mt-1 text-sm font-medium text-ink-600">Редактирование текста, привязки и подписей кнопок.</p>
+            <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Вопросы</h2>
+            <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">Редактирование текста, привязки и подписей кнопок.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <select className={inputClass + " sm:max-w-xs"} value={listPhase} onChange={(e) => setListPhase(e.target.value as typeof listPhase)}>
@@ -602,15 +605,15 @@ export function Admin() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                className="flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-slate-50 to-white p-3 ring-1 ring-slate-200/70 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-slate-50 to-white p-3 ring-1 ring-slate-200/70 dark:from-slate-800/90 dark:to-slate-900/90 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold text-indigo-700">
                     #{q.id} · {q.phase}
                     {q.readiness_kind ? ` · ${q.readiness_kind}` : ""}
                   </div>
-                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink-900">{q.text}</div>
-                  <div className="mt-1 text-xs font-medium text-ink-500">
+                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink-900 dark:text-slate-100">{q.text}</div>
+                  <div className="mt-1 text-xs font-medium text-ink-500 dark:text-slate-400">
                     cluster={q.cluster_id ?? "—"} · group={q.group_id ?? "—"} · sort {q.sort_order}
                     {q.option_labels?.length ? ` · варианты: ${q.option_labels.length}` : ""}
                   </div>
@@ -626,7 +629,7 @@ export function Admin() {
             ))}
           </AnimatePresence>
           {!filteredQuestions.length ? (
-            <div className="py-8 text-center text-sm font-medium text-ink-500">Ничего не найдено.</div>
+            <div className="py-8 text-center text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
           ) : null}
         </div>
       </motion.div>
@@ -647,26 +650,26 @@ export function Admin() {
               initial={{ y: 24, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 16, opacity: 0 }}
-              className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-soft ring-1 ring-slate-200/80"
+              className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-soft ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-600"
             >
-              <div id="admin-editor-title" className="text-lg font-extrabold text-ink-900">
+              <div id="admin-editor-title" className="text-lg font-extrabold text-ink-900 dark:text-slate-50">
                 Вопрос #{editor.question.id}
               </div>
-              <p className="mt-1 text-xs font-medium text-ink-600">{readinessHint}</p>
+              <p className="mt-1 text-xs font-medium text-ink-600 dark:text-slate-300">{readinessHint}</p>
 
-              <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-ink-500">Текст</label>
+              <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Текст</label>
               <textarea
                 className={`mt-1 min-h-24 ${inputClass}`}
                 value={editor.text}
                 onChange={(e) => setEditor({ ...editor, text: e.target.value })}
               />
-              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500">Второй язык</label>
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Второй язык</label>
               <textarea
                 className={`mt-1 min-h-16 ${inputClass}`}
                 value={editor.text_tj}
                 onChange={(e) => setEditor({ ...editor, text_tj: e.target.value })}
               />
-              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500">Сортировка</label>
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Сортировка</label>
               <input
                 className={`mt-1 ${inputClass}`}
                 type="number"
@@ -711,7 +714,7 @@ export function Admin() {
                 </div>
               )}
 
-              <div className="mt-4 text-xs font-bold uppercase tracking-wide text-ink-500">
+              <div className="mt-4 text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
                 Варианты ответа (RU) — оставьте пустыми для стандартных
               </div>
               <div className="mt-2 grid gap-2">
@@ -729,7 +732,7 @@ export function Admin() {
                   />
                 ))}
               </div>
-              <div className="mt-3 text-xs font-bold uppercase tracking-wide text-ink-500">Варианты (TJ), необязательно</div>
+              <div className="mt-3 text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Варианты (TJ), необязательно</div>
               <div className="mt-2 grid gap-2">
                 {Array.from({ length: labelSlots }, (_, i) => (
                   <input
@@ -759,7 +762,7 @@ export function Admin() {
                   type="button"
                   disabled={saving}
                   onClick={() => setEditor(null)}
-                  className="rounded-2xl bg-white px-4 py-2.5 text-sm font-extrabold text-ink-900 ring-1 ring-slate-200/80"
+                  className="rounded-2xl bg-white px-4 py-2.5 text-sm font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
                 >
                   Отмена
                 </button>

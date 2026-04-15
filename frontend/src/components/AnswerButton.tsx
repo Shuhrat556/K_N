@@ -14,7 +14,7 @@ export function AnswerButton({ children, selected, disabled, onClick, variant = 
     "min-h-[3rem] w-full rounded-2xl px-4 py-3.5 text-left text-base font-semibold leading-snug transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 sm:min-h-0 sm:py-3 sm:text-sm";
   const ghost = selected
     ? "bg-gradient-to-r from-indigo-600 to-sky-500 text-white shadow-soft ring-1 ring-white/30"
-    : "bg-white/80 text-ink-900 shadow-card ring-1 ring-slate-200/70 hover:-translate-y-0.5 hover:shadow-soft";
+    : "bg-white/80 text-ink-900 shadow-card ring-1 ring-slate-200/70 hover:-translate-y-0.5 hover:shadow-soft dark:bg-slate-800/95 dark:text-slate-100 dark:ring-slate-600/80 dark:hover:bg-slate-800";
   const solid = "bg-slate-900 text-white shadow-soft hover:-translate-y-0.5 hover:brightness-110";
 
   return (

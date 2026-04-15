@@ -15,7 +15,7 @@ export function Loader({ title, subtitle }: Props) {
           transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.span
-          className="absolute inset-1 rounded-full border-2 border-white/70"
+          className="absolute inset-1 rounded-full border-2 border-white/70 dark:border-slate-500/80"
           animate={{ rotate: 360 }}
           transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
         />
@@ -28,7 +28,7 @@ export function Loader({ title, subtitle }: Props) {
 
       <div>
         <motion.div
-          className="text-lg font-extrabold text-ink-900"
+          className="text-lg font-extrabold text-ink-900 dark:text-slate-50"
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
@@ -37,7 +37,7 @@ export function Loader({ title, subtitle }: Props) {
         </motion.div>
         {subtitle ? (
           <motion.div
-            className="mt-2 text-sm font-medium text-ink-700"
+            className="mt-2 text-sm font-medium text-ink-700 dark:text-slate-300"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
@@ -51,7 +51,7 @@ export function Loader({ title, subtitle }: Props) {
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="h-2 rounded-full bg-slate-200/80"
+            className="h-2 rounded-full bg-slate-200/80 dark:bg-slate-600/80"
             initial={{ opacity: 0.35 }}
             animate={{ opacity: [0.35, 1, 0.35] }}
             transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut", delay: i * 0.12 }}

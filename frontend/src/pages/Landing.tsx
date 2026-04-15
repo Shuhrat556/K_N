@@ -106,12 +106,12 @@ export function Landing() {
   ] as const;
 
   const ctaBtn =
-    "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-coral to-brand-coral-deep px-5 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-brand-coral/25 ring-1 ring-white/20 transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral focus-visible:ring-offset-2";
+    "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-coral to-brand-coral-deep px-5 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-brand-coral/25 ring-1 ring-white/20 transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950";
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-24 text-ink-900 sm:pb-0">
+    <div className="min-h-screen bg-slate-100 pb-24 text-ink-900 dark:bg-slate-950 dark:text-slate-100 sm:pb-0">
       {/* Sticky header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 shadow-sm backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
           <motion.div
             className="flex min-w-0 items-center gap-2.5 sm:gap-3"
@@ -123,21 +123,21 @@ export function Landing() {
               K
             </div>
             <div className="min-w-0">
-              <div className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 sm:text-xs">
+              <div className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 sm:text-xs">
                 {t(lang, "brand")}
               </div>
-              <div className="truncate text-xs font-extrabold text-brand-navy sm:text-sm">{t(lang, "landing_kicker")}</div>
+              <div className="truncate text-xs font-extrabold text-brand-navy dark:text-sky-200 sm:text-sm">{t(lang, "landing_kicker")}</div>
             </div>
           </motion.div>
 
-          <nav className="hidden items-center gap-1 text-sm font-bold text-brand-navy/90 md:flex">
-            <a href="#about" className="rounded-xl px-3 py-2 transition hover:bg-slate-100">
+          <nav className="hidden items-center gap-1 text-sm font-bold text-brand-navy/90 dark:text-sky-100/90 md:flex">
+            <a href="#about" className="rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
               {t(lang, "nav_about")}
             </a>
-            <a href="#clusters" className="rounded-xl px-3 py-2 transition hover:bg-slate-100">
+            <a href="#clusters" className="rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
               {t(lang, "nav_clusters")}
             </a>
-            <a href="#contacts" className="rounded-xl px-3 py-2 transition hover:bg-slate-100">
+            <a href="#contacts" className="rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
               {t(lang, "nav_contacts")}
             </a>
           </nav>
@@ -152,7 +152,7 @@ export function Landing() {
             </motion.button>
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-brand-navy shadow-sm md:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-brand-navy shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 md:hidden"
               aria-expanded={navOpen}
               aria-label="Menu"
               onClick={() => setNavOpen((v) => !v)}
@@ -178,16 +178,16 @@ export function Landing() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.28 }}
-              className="border-t border-slate-200/80 bg-white md:hidden"
+              className="border-t border-slate-200/80 bg-white dark:border-slate-700 dark:bg-slate-900 md:hidden"
             >
               <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
-                <a href="#about" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy" onClick={closeNav}>
+                <a href="#about" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
                   {t(lang, "nav_about")}
                 </a>
-                <a href="#clusters" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy" onClick={closeNav}>
+                <a href="#clusters" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
                   {t(lang, "nav_clusters")}
                 </a>
-                <a href="#contacts" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy" onClick={closeNav}>
+                <a href="#contacts" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
                   {t(lang, "nav_contacts")}
                 </a>
                 <motion.button type="button" onClick={() => { closeNav(); void onStart(); }} className={`${ctaBtn} mt-2 w-full`}>
@@ -202,7 +202,7 @@ export function Landing() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute inset-0 bg-[length:24px_24px] opacity-[0.35]"
+          className="pointer-events-none absolute inset-0 bg-[length:24px_24px] opacity-[0.35] dark:opacity-[0.12]"
           style={{
             backgroundImage: `linear-gradient(to right, rgb(148 163 184 / 0.12) 1px, transparent 1px),
               linear-gradient(to bottom, rgb(148 163 184 / 0.12) 1px, transparent 1px)`,
@@ -278,11 +278,14 @@ export function Landing() {
       </section>
 
       {/* How it works */}
-      <section id="about" className="relative -mt-12 scroll-mt-24 rounded-t-[2rem] bg-white px-4 py-16 shadow-[0_-12px_40px_-20px_rgba(15,39,68,0.15)] sm:px-6 sm:py-20 lg:px-10">
+      <section
+        id="about"
+        className="relative -mt-12 scroll-mt-24 rounded-t-[2rem] bg-white px-4 py-16 shadow-[0_-12px_40px_-20px_rgba(15,39,68,0.15)] dark:bg-slate-950 dark:shadow-[0_-12px_40px_-20px_rgba(0,0,0,0.4)] sm:px-6 sm:py-20 lg:px-10"
+      >
         <div className="mx-auto max-w-7xl">
           <motion.div {...va} className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">{t(lang, "landing_how_title")}</h2>
-            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 sm:text-base">{t(lang, "landing_how_sub")}</p>
+            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_how_title")}</h2>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">{t(lang, "landing_how_sub")}</p>
           </motion.div>
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
@@ -292,16 +295,16 @@ export function Landing() {
                 {...va}
                 transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : i * 0.08 }}
                 whileHover={reduce ? undefined : { y: -6 }}
-                className="group relative flex flex-col rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/80 p-5 shadow-card ring-1 ring-slate-100 transition hover:shadow-lg"
+                className="group relative flex flex-col rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/80 p-5 shadow-card ring-1 ring-slate-100 transition hover:shadow-lg dark:border-slate-700/80 dark:from-slate-900 dark:to-slate-900/80 dark:ring-slate-700/60"
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-coral/90 to-brand-coral-deep text-sm font-black text-white shadow-md">
                     {s.n}
                   </span>
-                  <s.Icon className="h-9 w-9 text-brand-navy/35 transition group-hover:text-brand-coral" />
+                  <s.Icon className="h-9 w-9 text-brand-navy/35 transition group-hover:text-brand-coral dark:text-slate-500 dark:group-hover:text-brand-coral" />
                 </div>
-                <h3 className="mt-4 text-lg font-extrabold text-brand-navy">{t(lang, s.titleKey)}</h3>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{t(lang, s.descKey)}</p>
+                <h3 className="mt-4 text-lg font-extrabold text-brand-navy dark:text-slate-50">{t(lang, s.titleKey)}</h3>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">{t(lang, s.descKey)}</p>
               </motion.article>
             ))}
           </div>
@@ -315,10 +318,10 @@ export function Landing() {
       </section>
 
       {/* Stats / clusters teaser */}
-      <section id="clusters" className="scroll-mt-24 bg-slate-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+      <section id="clusters" className="scroll-mt-24 bg-slate-50 px-4 py-16 dark:bg-slate-900/80 sm:px-6 sm:py-20 lg:px-10">
         <div className="mx-auto max-w-7xl">
           <motion.div {...va} className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy sm:text-3xl">{t(lang, "landing_stats_title")}</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_stats_title")}</h2>
           </motion.div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((st, i) => (
@@ -327,11 +330,11 @@ export function Landing() {
                 {...va}
                 transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : i * 0.06 }}
                 whileHover={reduce ? undefined : { y: -4 }}
-                className="rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50/90 to-white p-5 shadow-sm ring-1 ring-sky-100/80"
+                className="rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50/90 to-white p-5 shadow-sm ring-1 ring-sky-100/80 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900/90 dark:ring-slate-700/80"
               >
                 <div className="h-1.5 w-10 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" />
-                <h3 className="mt-4 text-base font-extrabold text-brand-navy">{t(lang, st.titleKey)}</h3>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{t(lang, st.descKey)}</p>
+                <h3 className="mt-4 text-base font-extrabold text-brand-navy dark:text-slate-50">{t(lang, st.titleKey)}</h3>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">{t(lang, st.descKey)}</p>
               </motion.div>
             ))}
           </div>
@@ -339,11 +342,11 @@ export function Landing() {
       </section>
 
       {/* Testimonial */}
-      <section className="bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-10">
+      <section className="bg-white px-4 py-14 dark:bg-slate-950 sm:px-6 sm:py-16 lg:px-10">
         <div className="mx-auto max-w-4xl">
           <motion.div
             {...va}
-            className="relative overflow-hidden rounded-[2rem] border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white p-8 shadow-soft ring-1 ring-slate-100 sm:p-10"
+            className="relative overflow-hidden rounded-[2rem] border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white p-8 shadow-soft ring-1 ring-slate-100 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900/95 dark:ring-slate-700 sm:p-10"
           >
             <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-coral/10 blur-2xl" />
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -362,10 +365,10 @@ export function Landing() {
                     </motion.span>
                   ))}
                 </div>
-                <blockquote className="mt-3 text-pretty text-base font-semibold leading-relaxed text-brand-navy sm:text-lg">
+                <blockquote className="mt-3 text-pretty text-base font-semibold leading-relaxed text-brand-navy dark:text-slate-100 sm:text-lg">
                   «{t(lang, "landing_testimonial_quote")}»
                 </blockquote>
-                <footer className="mt-3 text-sm font-bold text-slate-500">— {t(lang, "landing_testimonial_name")}</footer>
+                <footer className="mt-3 text-sm font-bold text-slate-500 dark:text-slate-400">— {t(lang, "landing_testimonial_name")}</footer>
               </div>
             </div>
           </motion.div>

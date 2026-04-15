@@ -49,13 +49,13 @@ export function Feedback() {
   return (
     <div className="page-shell flex min-h-full flex-col pb-16 pt-6 sm:pt-8">
       <header className="flex items-center justify-between gap-4">
-        <div className="text-sm font-extrabold text-ink-900">{t(lang, "feedback_title")}</div>
+        <div className="text-sm font-extrabold text-ink-900 dark:text-slate-50">{t(lang, "feedback_title")}</div>
         <div className="flex items-center gap-3">
           <motion.button
             type="button"
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate(-1)}
-            className="rounded-2xl bg-white/80 px-4 py-2 text-xs font-extrabold text-ink-900 shadow-card ring-1 ring-slate-200/70"
+            className="rounded-2xl bg-white/80 dark:bg-slate-900/90 px-4 py-2 text-xs font-extrabold text-ink-900 dark:text-slate-50 shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80"
           >
             {t(lang, "back")}
           </motion.button>
@@ -63,12 +63,12 @@ export function Feedback() {
         </div>
       </header>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-10 rounded-3xl bg-white/85 p-6 shadow-soft ring-1 ring-slate-200/70 sm:p-8">
-        <h1 className="text-lg font-extrabold text-ink-900">{t(lang, "feedback_form_title")}</h1>
-        <p className="mt-2 text-sm font-medium text-ink-600">{t(lang, "feedback_sub")}</p>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-10 rounded-3xl bg-white/85 dark:bg-slate-900/92 p-6 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80 sm:p-8">
+        <h1 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">{t(lang, "feedback_form_title")}</h1>
+        <p className="mt-2 text-sm font-medium text-ink-600 dark:text-slate-300">{t(lang, "feedback_sub")}</p>
 
-        <div className="mt-8 text-xs font-black uppercase tracking-wide text-ink-500">1</div>
-        <div className="mt-2 text-sm font-bold text-ink-900">{t(lang, "feedback_q1")}</div>
+        <div className="mt-8 text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">1</div>
+        <div className="mt-2 text-sm font-bold text-ink-900 dark:text-slate-50">{t(lang, "feedback_q1")}</div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {q1opts.map((o) => (
             <AnswerButton key={o.id} selected={q1 === o.id} onClick={() => setQ1(o.id)}>
@@ -77,8 +77,8 @@ export function Feedback() {
           ))}
         </div>
 
-        <div className="mt-10 text-xs font-black uppercase tracking-wide text-ink-500">2</div>
-        <div className="mt-2 text-sm font-bold text-ink-900">{t(lang, "feedback_q2")}</div>
+        <div className="mt-10 text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">2</div>
+        <div className="mt-2 text-sm font-bold text-ink-900 dark:text-slate-50">{t(lang, "feedback_q2")}</div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {q2opts.map((o) => (
             <AnswerButton key={o.id} selected={q2 === o.id} onClick={() => setQ2(o.id)}>
@@ -88,13 +88,13 @@ export function Feedback() {
         </div>
 
         <label className="mt-10 block">
-          <div className="text-xs font-black uppercase tracking-wide text-ink-500">3</div>
-          <div className="mt-2 text-sm font-bold text-ink-900">{t(lang, "feedback_q3")}</div>
+          <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">3</div>
+          <div className="mt-2 text-sm font-bold text-ink-900 dark:text-slate-50">{t(lang, "feedback_q3")}</div>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={5}
-            className="mt-3 w-full resize-none rounded-2xl bg-white/90 px-4 py-3 text-sm font-medium text-ink-900 shadow-card ring-1 ring-slate-200/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            className="mt-3 w-full resize-none rounded-2xl bg-white/90 dark:bg-slate-900/95 px-4 py-3 text-sm font-medium text-ink-900 dark:text-slate-50 shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
           />
         </label>
 

@@ -1,15 +1,23 @@
 import { useEffect } from "react";
 import { useAppStore } from "../store/useAppStore";
 
-/** Syncs `<html lang>` and document title with UI language (RU / TJ). */
+/** Syncs `<html lang>`, color-scheme, `dark` class, and document title. */
 export function DocumentLang() {
   const lang = useAppStore((s) => s.lang);
+  const theme = useAppStore((s) => s.theme);
 
   useEffect(() => {
     document.documentElement.lang = lang === "tg" ? "tg-Cyrl" : "ru";
     document.title =
       lang === "tg" ? "Kasbnoma — интихоби касб" : "Kasbnoma — выбор профессии";
   }, [lang]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const dark = theme === "dark";
+    root.classList.toggle("dark", dark);
+    root.style.colorScheme = dark ? "dark" : "light";
+  }, [theme]);
 
   return null;
 }

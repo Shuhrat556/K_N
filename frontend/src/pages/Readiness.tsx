@@ -123,10 +123,10 @@ export function Readiness() {
     return (
       <div className="page-shell flex min-h-full flex-col py-8">
         <div className="flex items-center justify-between">
-          <div className="h-10 w-40 animate-pulse rounded-2xl bg-white/70 ring-1 ring-slate-200/70" />
+          <div className="h-10 w-40 animate-pulse rounded-2xl bg-white/70 ring-1 ring-slate-200/70 dark:bg-slate-800/70 dark:ring-slate-700/80" />
           <LanguageSwitcher />
         </div>
-        <div className="mt-10 h-44 animate-pulse rounded-3xl bg-white/70 ring-1 ring-slate-200/70" />
+        <div className="mt-10 h-44 animate-pulse rounded-3xl bg-white/70 ring-1 ring-slate-200/70 dark:bg-slate-800/70 dark:ring-slate-700/80" />
       </div>
     );
   }
@@ -134,8 +134,8 @@ export function Readiness() {
   if (error) {
     return (
       <div className="page-shell max-w-xl py-16 text-center">
-        <div className="rounded-3xl bg-white/80 p-8 shadow-soft ring-1 ring-slate-200/70">
-          <div className="text-sm font-semibold text-ink-900">{error}</div>
+        <div className="rounded-3xl bg-white/80 dark:bg-slate-900/90 p-8 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80">
+          <div className="text-sm font-semibold text-ink-900 dark:text-slate-50">{error}</div>
           <button type="button" className="mt-6 text-sm font-extrabold text-indigo-700" onClick={() => navigate("/")}>
             {t(lang, "back")}
           </button>
@@ -147,7 +147,7 @@ export function Readiness() {
   return (
     <div className="page-shell flex min-h-full flex-col pb-12 pt-6 sm:pt-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-base font-extrabold text-ink-900 sm:text-sm">{t(lang, "readiness_title")}</div>
+        <div className="text-base font-extrabold text-ink-900 dark:text-slate-50 sm:text-sm">{t(lang, "readiness_title")}</div>
         <LanguageSwitcher />
       </header>
 
@@ -164,14 +164,14 @@ export function Readiness() {
             <motion.p
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 text-base font-medium leading-relaxed text-ink-700 sm:text-sm"
+              className="mb-6 text-base font-medium leading-relaxed text-ink-700 dark:text-slate-300 sm:text-sm"
             >
               {t(lang, "readiness_intro")}
             </motion.p>
             <AnimatePresence mode="wait">
               {current ? (
                 <QuestionCard key={current.id}>
-                  <h2 className="text-pretty text-xl font-extrabold leading-snug text-ink-900 sm:text-2xl lg:text-[1.65rem]">
+                  <h2 className="text-pretty text-xl font-extrabold leading-snug text-ink-900 dark:text-slate-50 sm:text-2xl lg:text-[1.65rem]">
                     {qText(current)}
                   </h2>
 
@@ -204,13 +204,13 @@ export function Readiness() {
                     : "bg-gradient-to-br from-rose-50 to-white ring-rose-200/70",
               ].join(" ")}
             >
-              <div className="text-xs font-black uppercase tracking-wide text-ink-700">
+              <div className="text-xs font-black uppercase tracking-wide text-ink-700 dark:text-slate-300">
                 {tone === "good" ? t(lang, "outcome_good_title") : tone === "medium" ? t(lang, "outcome_medium_title") : t(lang, "outcome_bad_title")}
               </div>
-              <div className="mt-3 text-2xl font-extrabold text-ink-900">
+              <div className="mt-3 text-2xl font-extrabold text-ink-900 dark:text-slate-50">
                 {serverOutcome != null ? `${t(lang, "readiness_score_label")}: ${serverOutcome.score}` : ""}
               </div>
-              <p className="mt-3 text-sm font-medium leading-relaxed text-ink-700">
+              <p className="mt-3 text-sm font-medium leading-relaxed text-ink-700 dark:text-slate-300">
                 {serverOutcome?.message?.trim()
                   ? serverOutcome.message
                   : tone === "good"
@@ -238,8 +238,8 @@ export function Readiness() {
                   whileTap={{ scale: 0.985 }}
                   onClick={() => navigate("/")}
                   className={[
-                    "rounded-2xl px-5 py-3 text-sm font-extrabold shadow-card ring-1 ring-slate-200/70",
-                    serverOutcome?.allowed ? "bg-white/80 text-ink-900" : "bg-slate-900 text-white",
+                    "rounded-2xl px-5 py-3 text-sm font-extrabold shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80",
+                    serverOutcome?.allowed ? "bg-white/80 dark:bg-slate-900/90 text-ink-900 dark:text-slate-50" : "bg-slate-900 text-white",
                   ].join(" ")}
                 >
                   {t(lang, "retry_later")}

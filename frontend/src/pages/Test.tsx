@@ -141,10 +141,10 @@ export function Test() {
     return (
       <div className="page-shell flex min-h-full flex-col py-8">
         <div className="flex items-center justify-between">
-          <div className="h-10 w-44 animate-pulse rounded-2xl bg-white/70 ring-1 ring-slate-200/70" />
+          <div className="h-10 w-44 animate-pulse rounded-2xl bg-white/70 dark:bg-slate-800/80 ring-1 ring-slate-200/70 dark:ring-slate-700/80" />
           <LanguageSwitcher />
         </div>
-        <div className="mt-10 h-56 animate-pulse rounded-3xl bg-white/70 ring-1 ring-slate-200/70" />
+        <div className="mt-10 h-56 animate-pulse rounded-3xl bg-white/70 dark:bg-slate-800/80 ring-1 ring-slate-200/70 dark:ring-slate-700/80" />
       </div>
     );
   }
@@ -152,8 +152,8 @@ export function Test() {
   if (error) {
     return (
       <div className="page-shell max-w-xl py-16 text-center">
-        <div className="rounded-3xl bg-white/80 p-8 shadow-soft ring-1 ring-slate-200/70">
-          <div className="text-sm font-semibold text-ink-900">{error}</div>
+        <div className="rounded-3xl bg-white/80 dark:bg-slate-900/90 p-8 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80">
+          <div className="text-sm font-semibold text-ink-900 dark:text-slate-50">{error}</div>
           <button type="button" className="mt-6 text-sm font-extrabold text-indigo-700" onClick={() => void loadQuestions()}>
             {t(lang, "retry_action")}
           </button>
@@ -166,8 +166,8 @@ export function Test() {
     <div className="page-shell flex min-h-full flex-col pb-12 pt-6 sm:pt-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-base font-extrabold text-ink-900 sm:text-sm">{t(lang, "test_title")}</div>
-          <div className="mt-1 text-sm font-semibold text-ink-600 sm:text-xs">
+          <div className="text-base font-extrabold text-ink-900 dark:text-slate-50 sm:text-sm">{t(lang, "test_title")}</div>
+          <div className="mt-1 text-sm font-semibold text-ink-600 dark:text-slate-300 sm:text-xs">
             {t(lang, "test_counter").replace("{current}", String(Math.min(idx + 1, Math.max(total, 1)))).replace("{total}", String(total))}
             {isAdaptiveRound ? t(lang, "test_adaptive_suffix") : ""}
           </div>
@@ -186,7 +186,7 @@ export function Test() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="mt-10 rounded-3xl bg-white/80 shadow-soft ring-1 ring-slate-200/70"
+            className="mt-10 rounded-3xl bg-white/80 dark:bg-slate-900/90 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80"
           >
             <Loader title={t(lang, "analyzing")} subtitle={t(lang, "brand")} />
           </motion.div>
@@ -207,11 +207,11 @@ export function Test() {
             <motion.div
               initial={{ scale: 0.98, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-soft ring-1 ring-slate-200/70"
+              className="w-full max-w-lg rounded-3xl bg-white p-8 dark:bg-slate-900 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80"
             >
               <div className="text-xs font-black uppercase tracking-wide text-indigo-700">{t(lang, "brand")}</div>
-              <div className="mt-2 text-2xl font-extrabold text-ink-900">{t(lang, "adaptive_title")}</div>
-              <p className="mt-3 text-sm font-medium leading-relaxed text-ink-700">{t(lang, "adaptive_sub")}</p>
+              <div className="mt-2 text-2xl font-extrabold text-ink-900 dark:text-slate-50">{t(lang, "adaptive_title")}</div>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-ink-700 dark:text-slate-300">{t(lang, "adaptive_sub")}</p>
               <motion.button
                 type="button"
                 whileHover={{ y: -2 }}
@@ -229,11 +229,11 @@ export function Test() {
       {!analyzing && !adaptiveIntro && current ? (
         <div className="mt-8">
           {!isAdaptiveRound ? (
-            <p className="mb-4 text-sm font-medium leading-relaxed text-ink-700">{t(lang, "test_intro")}</p>
+            <p className="mb-4 text-sm font-medium leading-relaxed text-ink-700 dark:text-slate-300">{t(lang, "test_intro")}</p>
           ) : null}
           <AnimatePresence mode="wait">
             <QuestionCard key={current.id}>
-              <h2 className="text-pretty text-xl font-extrabold leading-snug text-ink-900 sm:text-2xl lg:text-[1.65rem] lg:leading-tight">
+              <h2 className="text-pretty text-xl font-extrabold leading-snug text-ink-900 dark:text-slate-50 sm:text-2xl lg:text-[1.65rem] lg:leading-tight">
                 {qText(current)}
               </h2>
 

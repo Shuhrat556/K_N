@@ -79,8 +79,8 @@ export function Result() {
   if (error) {
     return (
       <div className="page-shell max-w-xl py-16 text-center">
-        <div className="rounded-3xl bg-white/80 p-8 shadow-soft ring-1 ring-slate-200/70">
-          <div className="text-sm font-semibold text-ink-900">{error}</div>
+        <div className="rounded-3xl bg-white/80 dark:bg-slate-900/90 p-8 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80">
+          <div className="text-sm font-semibold text-ink-900 dark:text-slate-50">{error}</div>
           <button type="button" className="mt-6 text-sm font-extrabold text-indigo-700" onClick={() => navigate("/test")}>
             {t(lang, "back")}
           </button>
@@ -93,10 +93,10 @@ export function Result() {
     return (
       <div className="page-shell py-10">
         <div className="flex items-center justify-between">
-          <div className="h-10 w-44 animate-pulse rounded-2xl bg-white/70 ring-1 ring-slate-200/70" />
+          <div className="h-10 w-44 animate-pulse rounded-2xl bg-white/70 ring-1 ring-slate-200/70 dark:ring-slate-700/80" />
           <LanguageSwitcher />
         </div>
-        <div className="mt-10 h-64 animate-pulse rounded-3xl bg-white/70 ring-1 ring-slate-200/70" />
+        <div className="mt-10 h-64 animate-pulse rounded-3xl bg-white/70 ring-1 ring-slate-200/70 dark:ring-slate-700/80" />
       </div>
     );
   }
@@ -104,13 +104,13 @@ export function Result() {
   return (
     <div className="page-shell flex min-h-full flex-col pb-16 pt-6 sm:pt-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-base font-extrabold text-ink-900 sm:text-sm">{t(lang, "result_title")}</div>
+        <div className="text-base font-extrabold text-ink-900 dark:text-slate-50 sm:text-sm">{t(lang, "result_title")}</div>
         <div className="flex flex-wrap items-center gap-2">
           <motion.button
             type="button"
             whileTap={{ scale: 0.98 }}
             onClick={() => window.print()}
-            className="rounded-2xl bg-white/80 px-4 py-2.5 text-sm font-extrabold text-ink-900 shadow-card ring-1 ring-slate-200/70 sm:py-2 sm:text-xs"
+            className="rounded-2xl bg-white/80 dark:bg-slate-900/90 px-4 py-2.5 text-sm font-extrabold text-ink-900 dark:text-slate-50 shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80 sm:py-2 sm:text-xs"
           >
             {t(lang, "result_print")}
           </motion.button>
@@ -126,7 +126,7 @@ export function Result() {
               a.click();
               URL.revokeObjectURL(url);
             }}
-            className="rounded-2xl bg-white/80 px-4 py-2.5 text-sm font-extrabold text-ink-900 shadow-card ring-1 ring-slate-200/70 sm:py-2 sm:text-xs"
+            className="rounded-2xl bg-white/80 dark:bg-slate-900/90 px-4 py-2.5 text-sm font-extrabold text-ink-900 dark:text-slate-50 shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80 sm:py-2 sm:text-xs"
           >
             {t(lang, "result_save")}
           </motion.button>
@@ -185,14 +185,14 @@ export function Result() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12 }}
-          className="mt-10 rounded-3xl bg-white/85 p-5 shadow-soft ring-1 ring-slate-200/70 sm:p-8"
+          className="mt-10 rounded-3xl bg-white/85 dark:bg-slate-900/92 p-5 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80 sm:p-8"
         >
-          <h2 className="text-base font-extrabold text-ink-900">{t(lang, "result_sample_programs_title")}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-ink-600">{t(lang, "result_sample_programs_note")}</p>
+          <h2 className="text-base font-extrabold text-ink-900 dark:text-slate-50">{t(lang, "result_sample_programs_title")}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-600 dark:text-slate-300">{t(lang, "result_sample_programs_note")}</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wide text-ink-500">
+                <tr className="border-b border-slate-200 dark:border-slate-700 text-[10px] font-extrabold uppercase tracking-wide text-ink-500 dark:text-slate-400">
                   <th className="py-2 pr-2">{t(lang, "result_col_id")}</th>
                   <th className="py-2 pr-2">{t(lang, "result_col_program")}</th>
                   <th className="py-2 pr-2">{t(lang, "result_col_location")}</th>
@@ -204,11 +204,11 @@ export function Result() {
               </thead>
               <tbody>
                 {samplePrograms.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 align-top text-ink-800">
-                    <td className="py-3 pr-2 font-mono text-[11px] text-ink-500">{row.id}</td>
+                  <tr key={row.id} className="border-b border-slate-100 dark:border-slate-700/80 align-top text-ink-800 dark:text-slate-200">
+                    <td className="py-3 pr-2 font-mono text-[11px] text-ink-500 dark:text-slate-400">{row.id}</td>
                     <td className="py-3 pr-2">
-                      <div className="font-semibold text-ink-900">{row.specialtyCodeNameTj}</div>
-                      <div className="mt-1 text-[11px] leading-snug text-ink-600">{row.institutionTj}</div>
+                      <div className="font-semibold text-ink-900 dark:text-slate-50">{row.specialtyCodeNameTj}</div>
+                      <div className="mt-1 text-[11px] leading-snug text-ink-600 dark:text-slate-300">{row.institutionTj}</div>
                     </td>
                     <td className="py-3 pr-2 whitespace-nowrap">{row.locationTj}</td>
                     <td className="py-3 pr-2 whitespace-nowrap">{row.formTj}</td>
@@ -241,7 +241,7 @@ export function Result() {
             clearSession();
             navigate("/");
           }}
-          className="inline-flex min-h-[3rem] flex-1 items-center justify-center rounded-2xl bg-white/80 px-5 py-3.5 text-base font-extrabold text-ink-900 shadow-card ring-1 ring-slate-200/70 sm:min-h-0 sm:py-3 sm:text-sm"
+          className="inline-flex min-h-[3rem] flex-1 items-center justify-center rounded-2xl bg-white/80 dark:bg-slate-900/90 px-5 py-3.5 text-base font-extrabold text-ink-900 dark:text-slate-50 shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80 sm:min-h-0 sm:py-3 sm:text-sm"
         >
           {t(lang, "result_cta_retake")}
         </motion.button>
