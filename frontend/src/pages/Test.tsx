@@ -12,7 +12,6 @@ import { QuestionCard } from "../components/QuestionCard";
 import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
 import { pickOptionLabel, pickQuestionText } from "../utils/questionText";
-import { shuffled } from "../utils/shuffle";
 
 export function Test() {
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ export function Test() {
     setError(null);
     try {
       const qs = await fetchQuestions(userId);
-      setQuestions(shuffled(qs));
+      setQuestions([...qs]);
       setIdx(0);
     } catch (e) {
       if (isAxiosError(e) && e.response?.status === 400) {
@@ -74,20 +73,18 @@ export function Test() {
     const L = current?.option_labels;
     const LTj = current?.option_labels_tj;
     if (L && L.length >= 5) {
-      const base = [0, 1, 2, 3, 4].map((i) => ({
+      return [0, 1, 2, 3, 4].map((i) => ({
         v: i,
         l: pickOptionLabel(lang, L[i] ?? "", LTj?.[i]),
       }));
-      return shuffled(base);
     }
-    const labels = [
+    return [
       { v: 0, l: t(lang, "likert_0") },
       { v: 1, l: t(lang, "likert_1") },
       { v: 2, l: t(lang, "likert_2") },
       { v: 3, l: t(lang, "likert_3") },
       { v: 4, l: t(lang, "likert_4") },
     ];
-    return shuffled(labels);
   }, [current?.id, current?.option_labels, current?.option_labels_tj, lang]);
 
   const finalizeBattery = useCallback(async () => {
@@ -99,7 +96,7 @@ export function Test() {
         setIsAdaptiveRound(true);
         setAdaptiveIntro(true);
         const qs = await fetchQuestions(userId);
-        setQuestions(shuffled(qs));
+        setQuestions([...qs]);
         setIdx(0);
         setAnalyzing(false);
         return;

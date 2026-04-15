@@ -10,7 +10,6 @@ import { QuestionCard } from "../components/QuestionCard";
 import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
 import { pickOptionLabel, pickQuestionText } from "../utils/questionText";
-import { shuffled } from "../utils/shuffle";
 
 type OutcomeView = "quiz" | "summary";
 
@@ -43,7 +42,7 @@ export function Readiness() {
       try {
         setLoading(true);
         const qs = await fetchReadinessQuestions(userId);
-        setQuestions(shuffled(qs));
+        setQuestions([...qs]);
       } catch {
         setError(t(useAppStore.getState().lang, "error_generic"));
       } finally {
@@ -60,25 +59,24 @@ export function Readiness() {
     const L = current?.option_labels;
     const LTj = current?.option_labels_tj;
     if (L && L.length >= 3) {
-      const base = [0, 1, 2].map((i) => ({
+      return [0, 1, 2].map((i) => ({
         v: i,
         l: pickOptionLabel(lang, L[i] ?? "", LTj?.[i]),
       }));
-      return shuffled(base);
     }
     const kind: ReadinessKind | undefined = current?.kind;
     if (kind === "emotional") {
-      return shuffled([
+      return [
         { v: 0, l: t(lang, "happy") },
         { v: 1, l: t(lang, "uncertain") },
         { v: 2, l: t(lang, "fear") },
-      ]);
+      ];
     }
-    return shuffled([
+    return [
       { v: 0, l: t(lang, "yes") },
       { v: 1, l: t(lang, "partly") },
       { v: 2, l: t(lang, "no") },
-    ]);
+    ];
   }, [current?.id, current?.kind, current?.option_labels, current?.option_labels_tj, lang]);
 
   const tone = useMemo(() => {
