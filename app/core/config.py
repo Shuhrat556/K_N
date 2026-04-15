@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     app_name: str = "Kasbnoma Career API"
     app_env: str = "development"
     database_url: str = "postgresql+psycopg2://kasbnoma:kasbnoma@localhost:5432/kasbnoma"
-    # Comma-separated browser origins for the SPA (e.g. http://localhost:5173). Use "*" only for local dev.
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Comma-separated browser origins for the SPA. Main.py also merges localhost + Render SPA defaults.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://k-n-7.onrender.com"
 
     @field_validator("database_url", mode="before")
     @classmethod

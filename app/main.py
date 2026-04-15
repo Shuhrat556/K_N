@@ -40,15 +40,15 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
     # CORS must be registered early so it wraps all routes/middleware added after it.
-    # Origins are controlled via `CORS_ORIGINS` (comma-separated). Example:
-    # CORS_ORIGINS=https://k-n-7.onrender.com,http://localhost:5173
-    origins = [o.strip().rstrip("/") for o in settings.cors_origins.split(",") if o.strip()]
-    if not origins:
-        origins = [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://k-n-7.onrender.com",
-        ]
+    # `CORS_ORIGINS` is comma-separated. We always merge SPA defaults so production is not
+    # accidentally locked to localhost-only when CORS_ORIGINS is unset or incomplete.
+    configured = [o.strip().rstrip("/") for o in settings.cors_origins.split(",") if o.strip()]
+    builtin_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://k-n-7.onrender.com",
+    ]
+    origins = list(dict.fromkeys(configured + builtin_origins))
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
