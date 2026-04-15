@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  preview: {
+    allowedHosts: ["k-n-7.onrender.com"],
+  },
 });
