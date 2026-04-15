@@ -1,10 +1,14 @@
 import { motion } from "framer-motion";
 
-export function Illustration() {
+type Props = {
+  className?: string;
+};
+
+export function Illustration({ className }: Props) {
   return (
     <motion.svg
       viewBox="0 0 560 420"
-      className="w-full max-w-xl"
+      className={className ?? "w-full max-w-xl"}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}

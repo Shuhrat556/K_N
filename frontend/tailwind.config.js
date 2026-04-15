@@ -18,6 +18,12 @@ export default {
           500: "#64748b",
         },
         mist: "#f6f7fb",
+        brand: {
+          navy: "#0f2744",
+          "navy-deep": "#0a1a30",
+          coral: "#f97316",
+          "coral-deep": "#ea580c",
+        },
       },
     },
   },
