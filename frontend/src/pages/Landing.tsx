@@ -298,7 +298,7 @@ export function Landing() {
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               />
               <img
-                src="/landing-hero.png"
+                src="/landing-hero.jpeg"
                 alt=""
                 decoding="async"
                 className="relative z-[1] mx-auto h-auto w-full max-h-[min(85vh,56rem)] max-w-5xl rounded-2xl object-contain object-center shadow-xl shadow-slate-900/15 dark:shadow-black/50 lg:max-w-6xl"
