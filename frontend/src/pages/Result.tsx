@@ -5,13 +5,8 @@ import { fetchResult } from "../api/kasbnoma";
 import type { ResultApiResponse } from "../api/types";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { ResultCard } from "../components/ResultCard";
-import {
-  SAMPLE_PROGRAMS_HISTORY,
-  clusterKlimovProfile,
-  formatReadinessNarrative,
-  readinessNarrative,
-} from "../data/resultConstants";
-import { clusterCopy, specCopy, t } from "../i18n/translations";
+import { SAMPLE_PROGRAMS_HISTORY, clusterKlimovProfile } from "../data/resultConstants";
+import { apiClusterName, apiSpecName, clusterCopy, specCopy, t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
 
 export function Result() {
@@ -20,6 +15,7 @@ export function Result() {
   const userId = useAppStore((s) => s.userId);
   const lastResultUserId = useAppStore((s) => s.lastResultUserId);
   const clearSession = useAppStore((s) => s.clearSession);
+  const testAttemptNo = useAppStore((s) => s.testAttemptNo);
 
   const effectiveUserId = lastResultUserId ?? userId;
 
@@ -53,15 +49,19 @@ export function Result() {
 
   const clusterTitle = useMemo(() => {
     const fromApi = data?.top_cluster_name?.trim();
+    if (lang === "tg") {
+      if (fromApi) return apiClusterName(lang, fromApi);
+      return cluster.title;
+    }
     return fromApi || cluster.title;
-  }, [data, cluster.title]);
+  }, [data?.top_cluster_name, lang, cluster.title]);
 
   const specLine = useMemo(() => {
-    if (data?.specializations?.length) return data.specializations.map((s) => s.name).join(" · ");
+    if (data?.specializations?.length) {
+      return data.specializations.map((s) => apiSpecName(lang, s.name)).join(" · ");
+    }
     return specTitles.length ? specTitles.join(" · ") : "—";
-  }, [data, specTitles]);
-
-  const readinessStory = useMemo(() => readinessNarrative(data?.readiness_score ?? null), [data?.readiness_score]);
+  }, [data, specTitles, lang]);
 
   const klimovProfile = useMemo(() => clusterKlimovProfile(topClusterId), [topClusterId]);
 
@@ -136,15 +136,6 @@ export function Result() {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-10 grid gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-5">
-          {readinessStory ? (
-            <ResultCard
-              badge={t(lang, "result_readiness_block")}
-              title={lang === "tg" ? readinessStory.titleTg : readinessStory.titleRu}
-              subtitle={formatReadinessNarrative(lang, readinessStory)}
-              icon={<span aria-hidden="true">🧘</span>}
-              delay={0.02}
-            />
-          ) : null}
           <ResultCard
             highlight
             badge={t(lang, "result_badge_top")}
@@ -172,8 +163,9 @@ export function Result() {
             delay={0.12}
           />
           <ResultCard
+            badge={t(lang, "result_badge_meta")}
             title={t(lang, "brand")}
-            subtitle={`${t(lang, "result_session_label")}: ${data.session_id.slice(0, 8)}…`}
+            subtitle={t(lang, "result_attempt_blurb").replace("{n}", String(Math.max(1, testAttemptNo)))}
             icon={<span aria-hidden="true">✅</span>}
             delay={0.18}
           />

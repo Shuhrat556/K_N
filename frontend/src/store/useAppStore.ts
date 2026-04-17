@@ -23,12 +23,16 @@ type AppState = {
 
   lastResultUserId: string | null;
   setLastResultUserId: (id: string | null) => void;
+
+  /** Simple 1-based counter for each new assessment (shown instead of raw session ids). */
+  testAttemptNo: number;
+  bumpTestAttempt: () => void;
 };
 
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      lang: "ru",
+      lang: "tg",
       setLang: (lang) => set({ lang }),
 
       theme: "light",
@@ -45,6 +49,9 @@ export const useAppStore = create<AppState>()(
 
       lastResultUserId: null,
       setLastResultUserId: (lastResultUserId) => set({ lastResultUserId }),
+
+      testAttemptNo: 0,
+      bumpTestAttempt: () => set((s) => ({ testAttemptNo: s.testAttemptNo + 1 })),
     }),
     {
       name: "kasbnoma-app",
@@ -54,6 +61,7 @@ export const useAppStore = create<AppState>()(
         userId: s.userId,
         sessionId: s.sessionId,
         lastResultUserId: s.lastResultUserId,
+        testAttemptNo: s.testAttemptNo,
       }),
     },
   ),

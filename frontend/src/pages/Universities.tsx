@@ -7,7 +7,7 @@ import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
 
 type Loc = "all" | University["location"];
-type Dist = "all" | University["district"];
+type Dist = University["district"];
 type Study = "all" | University["studyType"];
 type LangF = "all" | University["language"];
 type Price = "all" | University["price"];
@@ -68,10 +68,25 @@ function priceLabel(lang: "ru" | "tg", v: Price) {
 
 function distLabel(lang: "ru" | "tg", v: Dist) {
   const map: Record<"ru" | "tg", Record<string, string>> = {
-    ru: { all: "Все", center: "Центр", north: "Север", south: "Юг", remote: "Онлайн" },
-    tg: { all: "Ҳама", center: "Марказ", north: "Шимол", south: "Ҷануб", remote: "Онлайн" },
+    ru: { center: "Центр", north: "Север", south: "Юг", remote: "Онлайн" },
+    tg: { center: "Марказ", north: "Шимол", south: "Ҷануб", remote: "Онлайн" },
   };
   return map[lang][v] ?? v;
+}
+
+function placeChipLabel(lang: "ru" | "tg", u: University) {
+  if (u.location === "remote") return locLabel(lang, "remote");
+  const city = locLabel(lang, u.location as Loc);
+  const zone = distLabel(lang, u.district as Dist);
+  return `${city} · ${zone}`;
+}
+
+function facultyLabel(lang: "ru" | "tg", faculty: string) {
+  if (lang === "tg" && faculty.includes(" / ")) {
+    const parts = faculty.split(" / ").map((p) => p.trim());
+    return parts[parts.length - 1] || faculty;
+  }
+  return faculty;
 }
 
 export function Universities() {
@@ -79,7 +94,6 @@ export function Universities() {
   const lang = useAppStore((s) => s.lang);
 
   const [loc, setLoc] = useState<Loc>("all");
-  const [dist, setDist] = useState<Dist>("all");
   const [study, setStudy] = useState<Study>("all");
   const [langF, setLangF] = useState<LangF>("all");
   const [price, setPrice] = useState<Price>("all");
@@ -87,14 +101,13 @@ export function Universities() {
   const filtered = useMemo(() => {
     const rows = universities.filter((u) => {
       if (loc !== "all" && u.location !== loc) return false;
-      if (dist !== "all" && u.district !== dist) return false;
       if (study !== "all" && u.studyType !== study) return false;
       if (langF !== "all" && u.language !== langF) return false;
       if (price !== "all" && u.price !== price) return false;
       return true;
     });
     return [...rows].sort((a, b) => b.requirementScore - a.requirementScore);
-  }, [loc, dist, study, langF, price]);
+  }, [loc, study, langF, price]);
 
   const chip = <T extends string>(value: T, current: T, set: (v: T) => void, label: string) => {
     const active = value === current;
@@ -138,16 +151,10 @@ export function Universities() {
 
       <section className="mt-8 rounded-3xl bg-white/80 dark:bg-slate-900/90 p-6 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80">
         <div className="grid gap-5 lg:grid-cols-2">
-          <div>
-            <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_location")}</div>
+          <div className="lg:col-span-2">
+            <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_place")}</div>
             <div className="mt-3 flex flex-wrap gap-2">
               {(["all", "dushanbe", "moscow", "remote", "bokhtar", "khujand"] as const).map((v) => chip(v, loc, setLoc, locLabel(lang, v)))}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_district")}</div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(["all", "center", "north", "south", "remote"] as const).map((v) => chip(v, dist, setDist, distLabel(lang, v)))}
             </div>
           </div>
           <div>
@@ -162,7 +169,7 @@ export function Universities() {
               {(["all", "ru", "tj", "en", "mixed"] as const).map((v) => chip(v, langF, setLangF, langLabel(lang, v)))}
             </div>
           </div>
-          <div>
+          <div className="lg:col-span-2">
             <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_price")}</div>
             <div className="mt-3 flex flex-wrap gap-2">
               {(["all", "free", "paid"] as const).map((v) => chip(v, price, setPrice, priceLabel(lang, v)))}
@@ -178,27 +185,28 @@ export function Universities() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-3xl bg-white/85 dark:bg-slate-900/92 p-6 shadow-soft ring-1 ring-slate-200/70 dark:ring-slate-700/80"
+            className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-soft ring-1 ring-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:ring-slate-600/80"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-lg font-extrabold text-ink-900 dark:text-slate-50">{u.name}</div>
-                <div className="mt-1 text-xs font-semibold text-ink-600 dark:text-slate-300">
-                  {t(lang, "uni_faculty")}: {u.faculty}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
-                  <span className="rounded-full bg-slate-900/5 px-2 py-1 text-ink-800 dark:text-slate-200">{locLabel(lang, u.location as Loc)}</span>
-                  <span className="rounded-full bg-slate-900/5 px-2 py-1 text-ink-800 dark:text-slate-200">{distLabel(lang, u.district as Dist)}</span>
-                  <span className="rounded-full bg-slate-900/5 px-2 py-1 text-ink-800 dark:text-slate-200">{studyLabel(lang, u.studyType)}</span>
-                  <span className="rounded-full bg-slate-900/5 px-2 py-1 text-ink-800 dark:text-slate-200">{langLabel(lang, u.language as LangF)}</span>
-                  <span className="rounded-full bg-slate-900/5 px-2 py-1 text-ink-800 dark:text-slate-200">{priceLabel(lang, u.price)}</span>
-                </div>
+            <div>
+              <div className="text-lg font-extrabold text-slate-950 dark:text-slate-50">{u.name}</div>
+              <div className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                {t(lang, "uni_faculty")}: {facultyLabel(lang, u.faculty)}
               </div>
-              <div className="shrink-0 rounded-2xl bg-gradient-to-br from-indigo-600 to-sky-500 px-3 py-2 text-xs font-black text-white shadow-soft">
-                {u.requirementScore}
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+                <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
+                  {placeChipLabel(lang, u)}
+                </span>
+                <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
+                  {studyLabel(lang, u.studyType)}
+                </span>
+                <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
+                  {langLabel(lang, u.language as LangF)}
+                </span>
+                <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
+                  {priceLabel(lang, u.price)}
+                </span>
               </div>
             </div>
-            <div className="mt-4 text-xs font-semibold text-ink-600 dark:text-slate-300">Demo sort: higher score = stricter entry (as requested).</div>
           </motion.article>
         ))}
       </div>

@@ -8,8 +8,7 @@ export function DocumentLang() {
 
   useEffect(() => {
     document.documentElement.lang = lang === "tg" ? "tg-Cyrl" : "ru";
-    document.title =
-      lang === "tg" ? "Kasbnoma — интихоби касб" : "Kasbnoma — выбор профессии";
+    document.title = lang === "tg" ? "Касбнома — интихоби касб" : "Касбнома — профориентация";
   }, [lang]);
 
   useEffect(() => {

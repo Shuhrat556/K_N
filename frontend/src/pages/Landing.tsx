@@ -1,9 +1,9 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BrandLogo } from "../components/BrandLogo";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
-import { t } from "../i18n/translations";
+import { clusterCopy, t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
 import { startTest } from "../api/kasbnoma";
 
@@ -67,6 +67,7 @@ function IconSpark({ className }: { className?: string }) {
 
 export function Landing() {
   const navigate = useNavigate();
+  const location = useLocation();
   const reduce = useReducedMotion();
   const va = viewAnim(reduce);
   const [bootError, setBootError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function Landing() {
   const setSession = useAppStore((s) => s.setSession);
   const clearSession = useAppStore((s) => s.clearSession);
   const setReadinessOutcome = useAppStore((s) => s.setReadinessOutcome);
+  const bumpTestAttempt = useAppStore((s) => s.bumpTestAttempt);
 
   const onStart = async () => {
     try {
@@ -82,6 +84,7 @@ export function Landing() {
       clearSession();
       setReadinessOutcome(null);
       const res = await startTest(null);
+      bumpTestAttempt();
       setSession(res.user_id, res.session_id);
       navigate("/readiness");
     } catch {
@@ -91,6 +94,13 @@ export function Landing() {
 
   const closeNav = () => setNavOpen(false);
 
+  useEffect(() => {
+    if (location.hash !== "#start-test") return;
+    const el = document.getElementById("start-test");
+    if (!el) return;
+    requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [location.hash, location.pathname]);
+
   const steps = [
     { n: 1, Icon: IconStep1, titleKey: "landing_step1_title", descKey: "landing_step1_desc" },
     { n: 2, Icon: IconStep2, titleKey: "landing_step2_title", descKey: "landing_step2_desc" },
@@ -98,12 +108,9 @@ export function Landing() {
     { n: 4, Icon: IconStep4, titleKey: "landing_step4_title", descKey: "landing_step4_desc" },
   ] as const;
 
-  const stats = [
-    { titleKey: "landing_stat1_title", descKey: "landing_stat1_desc" },
-    { titleKey: "landing_stat2_title", descKey: "landing_stat2_desc" },
-    { titleKey: "landing_stat3_title", descKey: "landing_stat3_desc" },
-    { titleKey: "landing_stat4_title", descKey: "landing_stat4_desc" },
-  ] as const;
+  const clusterIds = [1, 2, 3, 4, 5] as const;
+  const advantageKeys = ["landing_adv_1", "landing_adv_2", "landing_adv_3", "landing_adv_4", "landing_adv_5"] as const;
+  const sampleCluster = clusterCopy(lang, 5);
 
   const ctaBtn =
     "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-coral to-brand-coral-deep px-5 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-brand-coral/25 ring-1 ring-white/20 transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950";
@@ -113,36 +120,45 @@ export function Landing() {
       {/* Sticky header */}
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
-          <motion.div
-            className="flex min-w-0 items-center gap-2.5 sm:gap-3"
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <BrandLogo variant="header" className="rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-600/50" />
-            <div className="min-w-0">
-              <div className="truncate text-brand-mark-3d">{t(lang, "brand")}</div>
-              <div className="truncate text-xs text-brand-navy dark:text-sky-200 sm:text-sm">
-                <span className="text-submark-3d">{t(lang, "landing_kicker")}</span>
+          <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+            <Link to="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" onClick={() => setNavOpen(false)}>
+              <BrandLogo variant="header" className="rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-600/50" />
+              <div className="min-w-0">
+                <div className="truncate text-brand-mark-3d">{t(lang, "brand")}</div>
+                <div className="truncate text-xs text-brand-navy dark:text-sky-200 sm:text-sm">
+                  <span className="text-submark-3d">{t(lang, "landing_kicker")}</span>
+                </div>
               </div>
-            </div>
+            </Link>
           </motion.div>
 
-          <nav className="hidden items-center gap-1 text-sm font-bold text-brand-navy/90 dark:text-sky-100/90 md:flex">
-            <a href="#about" className="rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
-              {t(lang, "nav_about")}
+          <nav className="hidden flex-wrap items-center justify-center gap-0.5 text-[11px] font-bold text-brand-navy/90 dark:text-sky-100/90 md:flex lg:text-xs xl:text-sm">
+            <Link to="/" className="rounded-xl px-2 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 xl:px-3">
+              {t(lang, "nav_home")}
+            </Link>
+            <Link to="/about" className="rounded-xl px-2 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 xl:px-3">
+              {t(lang, "nav_about_platform")}
+            </Link>
+            <a href="#how-it-works" className="rounded-xl px-2 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 xl:px-3">
+              {t(lang, "nav_how")}
             </a>
-            <a href="#clusters" className="rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
-              {t(lang, "nav_clusters")}
-            </a>
-            <a href="#contacts" className="rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
-              {t(lang, "nav_contacts")}
-            </a>
+            <Link to="/specialties" className="rounded-xl px-2 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 xl:px-3">
+              {t(lang, "nav_specialties")}
+            </Link>
+            <Link to="/universities" className="rounded-xl px-2 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 xl:px-3">
+              {t(lang, "nav_universities")}
+            </Link>
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <LanguageSwitcher />
-            <motion.button type="button" onClick={onStart} whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className={`${ctaBtn} hidden sm:inline-flex`}>
+            <Link
+              to="/login"
+              className="hidden rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-extrabold text-brand-navy shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 md:inline-flex lg:text-sm"
+            >
+              {t(lang, "nav_login")}
+            </Link>
+            <motion.button type="button" onClick={onStart} whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className={`${ctaBtn} hidden md:inline-flex`}>
               {t(lang, "landing_cta")}
               <motion.span aria-hidden className="inline-block" animate={{ x: [0, 3, 0] }} transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}>
                 →
@@ -179,15 +195,27 @@ export function Landing() {
               className="border-t border-slate-200/80 bg-white dark:border-slate-700 dark:bg-slate-900 md:hidden"
             >
               <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
-                <a href="#about" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
-                  {t(lang, "nav_about")}
+                <Link to="/" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_home")}
+                </Link>
+                <a href="#how-it-works" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_how")}
                 </a>
-                <a href="#clusters" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
-                  {t(lang, "nav_clusters")}
-                </a>
-                <a href="#contacts" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
-                  {t(lang, "nav_contacts")}
-                </a>
+                <Link to="/specialties" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_specialties")}
+                </Link>
+                <Link to="/universities" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_universities")}
+                </Link>
+                <Link to="/result" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_my_result")}
+                </Link>
+                <Link to="/login" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_account")}
+                </Link>
+                <Link to="/subscriptions" className="rounded-xl px-3 py-3 text-sm font-bold text-brand-navy dark:text-sky-100" onClick={closeNav}>
+                  {t(lang, "nav_subscriptions")}
+                </Link>
                 <motion.button type="button" onClick={() => { closeNav(); void onStart(); }} className={`${ctaBtn} mt-2 w-full`}>
                   {t(lang, "landing_cta")}
                 </motion.button>
@@ -245,7 +273,7 @@ export function Landing() {
                 <span aria-hidden>→</span>
               </motion.button>
               <motion.a
-                href="#about"
+                href="#how-it-works"
                 whileHover={{ y: -1 }}
                 className="inline-flex min-h-[2.75rem] items-center justify-center rounded-2xl border border-slate-300/90 bg-white/80 px-6 py-3 text-sm font-extrabold text-brand-navy shadow-sm backdrop-blur-sm transition hover:bg-white dark:border-white/35 dark:bg-white/10 dark:text-white dark:shadow-none dark:hover:bg-white/15"
               >
@@ -265,22 +293,58 @@ export function Landing() {
           >
             <div className="relative mx-auto max-w-lg lg:max-w-none">
               <motion.div
-                className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-slate-200/40 to-sky-100/30 blur-2xl dark:from-white/25 dark:to-white/5"
-                animate={reduce ? undefined : { opacity: [0.5, 0.85, 0.5] }}
+                className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-sky-200/35 to-indigo-200/25 blur-3xl dark:from-sky-500/20 dark:to-indigo-600/10"
+                animate={reduce ? undefined : { opacity: [0.45, 0.75, 0.45] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               />
-              <div className="relative rounded-[1.75rem] border border-slate-200/70 bg-white/70 p-5 shadow-lg shadow-slate-900/5 ring-1 ring-white/80 backdrop-blur-md dark:border-transparent dark:bg-white/10 dark:shadow-none dark:ring-white/25 sm:p-8">
-                <BrandLogo variant="hero" className="flex justify-center" />
-              </div>
+              <img
+                src="/landing-hero.png"
+                alt=""
+                width={1200}
+                height={900}
+                decoding="async"
+                className="relative z-[1] mx-auto w-full max-w-lg rounded-2xl object-cover shadow-xl shadow-slate-900/15 dark:shadow-black/50 lg:max-w-none"
+              />
             </div>
           </motion.div>
         </div>
+
       </section>
 
-      {/* How it works */}
+      {/* 2. Кластерҳо */}
+      <section id="clusters" className="scroll-mt-24 bg-white px-4 py-16 dark:bg-slate-950 sm:px-6 sm:py-20 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <motion.div {...va} className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_clusters_title")}</h2>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">{t(lang, "landing_clusters_sub")}</p>
+          </motion.div>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {clusterIds.map((id, i) => {
+              const { title, desc } = clusterCopy(lang, id);
+              return (
+                <motion.article
+                  key={id}
+                  {...va}
+                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : i * 0.05 }}
+                  whileHover={reduce ? undefined : { y: -4 }}
+                  className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/80 p-5 shadow-card ring-1 ring-slate-100 dark:border-slate-700/80 dark:from-slate-900 dark:to-slate-900/80 dark:ring-slate-700/60"
+                >
+                  <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-black text-white">
+                    {id}
+                  </span>
+                  <h3 className="mt-4 text-lg font-extrabold text-brand-navy dark:text-slate-50">{title}</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">{desc}</p>
+                </motion.article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Чӣ гуна кор мекунад */}
       <section
-        id="about"
-        className="relative -mt-12 scroll-mt-24 rounded-t-[2rem] bg-white px-4 py-16 shadow-[0_-12px_40px_-20px_rgba(15,39,68,0.15)] dark:bg-slate-950 dark:shadow-[0_-12px_40px_-20px_rgba(0,0,0,0.4)] sm:px-6 sm:py-20 lg:px-10"
+        id="how-it-works"
+        className="relative scroll-mt-24 bg-slate-50 px-4 py-16 dark:bg-slate-900/80 sm:px-6 sm:py-20 lg:px-10"
       >
         <div className="mx-auto max-w-7xl">
           <motion.div {...va} className="mx-auto max-w-2xl text-center">
@@ -317,33 +381,56 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Stats / clusters teaser */}
-      <section id="clusters" className="scroll-mt-24 bg-slate-50 px-4 py-16 dark:bg-slate-900/80 sm:px-6 sm:py-20 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          <motion.div {...va} className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_stats_title")}</h2>
+      {/* 4. Намунаи натиҷа */}
+      <section id="sample-result" className="scroll-mt-24 bg-white px-4 py-16 dark:bg-slate-950 sm:px-6 sm:py-20 lg:px-10">
+        <div className="mx-auto max-w-3xl">
+          <motion.div {...va} className="text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_sample_title")}</h2>
+            <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300 sm:text-base">{t(lang, "landing_sample_sub")}</p>
           </motion.div>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((st, i) => (
-              <motion.div
-                key={st.titleKey}
-                {...va}
-                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : i * 0.06 }}
-                whileHover={reduce ? undefined : { y: -4 }}
-                className="rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50/90 to-white p-5 shadow-sm ring-1 ring-sky-100/80 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900/90 dark:ring-slate-700/80"
-              >
-                <div className="h-1.5 w-10 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" />
-                <h3 className="mt-4 text-base font-extrabold text-brand-navy dark:text-slate-50">{t(lang, st.titleKey)}</h3>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">{t(lang, st.descKey)}</p>
-              </motion.div>
-            ))}
-          </div>
+          <motion.div
+            {...va}
+            className="mt-10 rounded-3xl bg-gradient-to-br from-indigo-600 via-sky-600 to-emerald-500 p-8 text-white shadow-xl ring-1 ring-white/20"
+          >
+            <div className="text-xs font-black uppercase tracking-wide text-white/80">{t(lang, "landing_sample_badge")}</div>
+            <h3 className="mt-3 text-2xl font-extrabold leading-snug sm:text-3xl">{sampleCluster.title}</h3>
+            <p className="mt-3 text-base font-medium leading-relaxed text-white/90">{sampleCluster.desc}</p>
+            <p className="mt-6 text-sm font-semibold text-white/85">{t(lang, "landing_sample_specs_example")}</p>
+          </motion.div>
         </div>
       </section>
 
-      {/* Testimonial */}
-      <section className="bg-white px-4 py-14 dark:bg-slate-950 sm:px-6 sm:py-16 lg:px-10">
+      {/* 5. Афзалиятҳо */}
+      <section id="advantages" className="scroll-mt-24 bg-slate-50 px-4 py-16 dark:bg-slate-900/80 sm:px-6 sm:py-20 lg:px-10">
+        <div className="mx-auto max-w-3xl">
+          <motion.div {...va} className="text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_advantages_title")}</h2>
+            <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300 sm:text-base">{t(lang, "landing_advantages_sub")}</p>
+          </motion.div>
+          <ul className="mt-10 space-y-4">
+            {advantageKeys.map((key, i) => (
+              <motion.li
+                key={key}
+                {...va}
+                transition={{ duration: 0.45, delay: reduce ? 0 : i * 0.05 }}
+                className="flex gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm font-semibold leading-relaxed text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <span className="text-lg" aria-hidden>
+                  ✅
+                </span>
+                <span>{t(lang, key)}</span>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 6. Фикру мулоҳизаҳо */}
+      <section id="testimonials" className="scroll-mt-24 bg-white px-4 py-14 dark:bg-slate-950 sm:px-6 sm:py-16 lg:px-10">
         <div className="mx-auto max-w-4xl">
+          <motion.h2 {...va} className="mb-10 text-center text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">
+            {t(lang, "landing_testimonials_heading")}
+          </motion.h2>
           <motion.div
             {...va}
             className="relative overflow-hidden rounded-[2rem] border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white p-8 shadow-soft ring-1 ring-slate-100 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900/95 dark:ring-slate-700 sm:p-10"
@@ -371,6 +458,18 @@ export function Landing() {
         </div>
       </section>
 
+      {/* 7. Оғози тест */}
+      <section id="start-test" className="scroll-mt-24 bg-gradient-to-b from-slate-100 to-white px-4 py-16 dark:from-slate-900 dark:to-slate-950 sm:px-6 sm:py-20 lg:px-10">
+        <motion.div {...va} className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-sky-100 sm:text-3xl">{t(lang, "landing_final_title")}</h2>
+          <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300 sm:text-base">{t(lang, "landing_final_sub")}</p>
+          <motion.button type="button" onClick={onStart} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className={`${ctaBtn} mt-8 px-8 py-3.5 text-base`}>
+            {t(lang, "landing_cta")}
+            <span aria-hidden>→</span>
+          </motion.button>
+        </motion.div>
+      </section>
+
       {/* Footer */}
       <footer id="contacts" className="scroll-mt-24 bg-gradient-to-b from-brand-navy-deep to-brand-navy text-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:flex-row sm:items-start sm:justify-between sm:px-6 lg:px-10">
@@ -382,9 +481,15 @@ export function Landing() {
             <p className="mt-3 max-w-xs text-sm font-medium leading-relaxed text-white/70">{t(lang, "landing_sub")}</p>
           </div>
           <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm font-bold">
-            <a href="#about" className="text-white/85 transition hover:text-white">
-              {t(lang, "footer_about")}
+            <Link to="/about" className="text-white/85 transition hover:text-white">
+              {t(lang, "nav_about_platform")}
+            </Link>
+            <a href="#how-it-works" className="text-white/85 transition hover:text-white">
+              {t(lang, "nav_how")}
             </a>
+            <Link to="/specialties" className="text-white/85 transition hover:text-white">
+              {t(lang, "nav_specialties")}
+            </Link>
             <Link to="/universities" className="text-white/85 transition hover:text-white">
               {t(lang, "footer_unis")}
             </Link>

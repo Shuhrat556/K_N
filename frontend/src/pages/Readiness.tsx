@@ -79,13 +79,6 @@ export function Readiness() {
     ];
   }, [current?.id, current?.kind, current?.option_labels, current?.option_labels_tj, lang]);
 
-  const tone = useMemo(() => {
-    const o = serverOutcome?.outcome;
-    if (o === "allow") return "good" as const;
-    if (o === "allow_warning") return "medium" as const;
-    return "bad" as const;
-  }, [serverOutcome]);
-
   const pick = async (choiceIndex: number) => {
     if (!current || submitting) return;
     const nextAnswers = { ...answers, [current.id]: choiceIndex };
@@ -153,6 +146,13 @@ export function Readiness() {
         <ProgressBar
           value={outcomeView === "quiz" ? (questions.length ? idx / questions.length : 0) : 1}
           label={t(lang, "readiness_sub")}
+          detail={
+            outcomeView === "quiz" && questions.length
+              ? t(lang, "readiness_counter")
+                  .replace("{current}", String(idx + 1))
+                  .replace("{total}", String(questions.length))
+              : undefined
+          }
         />
       </div>
 
@@ -192,31 +192,8 @@ export function Readiness() {
             exit={{ opacity: 0, y: -10 }}
             className="mt-8"
           >
-            <div
-              className={[
-                "rounded-3xl p-8 shadow-soft ring-1",
-                tone === "good"
-                  ? "bg-gradient-to-br from-emerald-50 to-white ring-emerald-200/70"
-                  : tone === "medium"
-                    ? "bg-gradient-to-br from-amber-50 to-white ring-amber-200/70"
-                    : "bg-gradient-to-br from-rose-50 to-white ring-rose-200/70",
-              ].join(" ")}
-            >
-              <div className="text-xs font-black uppercase tracking-wide text-ink-700 dark:text-slate-300">
-                {tone === "good" ? t(lang, "outcome_good_title") : tone === "medium" ? t(lang, "outcome_medium_title") : t(lang, "outcome_bad_title")}
-              </div>
-              <div className="mt-3 text-2xl font-extrabold text-ink-900 dark:text-slate-50">
-                {serverOutcome != null ? `${t(lang, "readiness_score_label")}: ${serverOutcome.score}` : ""}
-              </div>
-              <p className="mt-3 text-sm font-medium leading-relaxed text-ink-700 dark:text-slate-300">
-                {serverOutcome?.message?.trim()
-                  ? serverOutcome.message
-                  : tone === "good"
-                    ? t(lang, "outcome_good_sub")
-                    : tone === "medium"
-                      ? t(lang, "outcome_medium_sub")
-                      : t(lang, "outcome_bad_sub")}
-              </p>
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-slate-900 shadow-soft ring-1 ring-slate-200/80 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-600/90">
+              <p className="text-sm font-semibold leading-relaxed text-slate-800 dark:text-slate-100">{t(lang, "readiness_summary_prompt")}</p>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {serverOutcome?.allowed ? (
@@ -236,8 +213,10 @@ export function Readiness() {
                   whileTap={{ scale: 0.985 }}
                   onClick={() => navigate("/")}
                   className={[
-                    "rounded-2xl px-5 py-3 text-sm font-extrabold shadow-card ring-1 ring-slate-200/70 dark:ring-slate-700/80",
-                    serverOutcome?.allowed ? "bg-white/80 dark:bg-slate-900/90 text-ink-900 dark:text-slate-50" : "bg-slate-900 text-white",
+                    "rounded-2xl px-5 py-3 text-sm font-extrabold shadow-card ring-1 ring-slate-300 dark:ring-slate-600",
+                    serverOutcome?.allowed
+                      ? "bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-50"
+                      : "bg-slate-900 text-white dark:bg-slate-950",
                   ].join(" ")}
                 >
                   {t(lang, "retry_later")}

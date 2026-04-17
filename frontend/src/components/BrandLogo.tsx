@@ -87,7 +87,7 @@ export function BrandLogo({ variant, className, imgClassName }: Props) {
     >
       <motion.img
         src={src}
-        alt="Kasbnoma"
+        alt="Касбнома"
         width={variant === "hero" ? 512 : variant === "testimonial" ? 256 : 128}
         height={variant === "hero" ? 512 : variant === "testimonial" ? 256 : 128}
         decoding="async"

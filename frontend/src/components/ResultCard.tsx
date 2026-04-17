@@ -33,13 +33,15 @@ export function ResultCard({ title, subtitle, icon, highlight, delay = 0, badge 
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <div
-            className={["text-xs font-bold uppercase tracking-wide", highlight ? "text-white/80" : "text-ink-500 dark:text-slate-400"].join(
-              " ",
-            )}
-          >
-            {badge ?? (highlight ? "Главный результат" : "Детали")}
-          </div>
+          {badge ? (
+            <div
+              className={["text-xs font-bold uppercase tracking-wide", highlight ? "text-white/80" : "text-ink-500 dark:text-slate-400"].join(
+                " ",
+              )}
+            >
+              {badge}
+            </div>
+          ) : null}
           <div
             className={[
               "mt-1 text-xl font-extrabold leading-snug sm:text-lg",
