@@ -24,7 +24,7 @@ export function LanguageSwitcher() {
         {active ? (
           <motion.span
             layoutId="lang-pill"
-            className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-600 to-sky-500 shadow-soft"
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-600 to-sky-500 shadow-[0_4px_18px_-6px_rgba(79,70,229,0.45)]"
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
           />
         ) : null}
@@ -34,7 +34,7 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 p-1 pr-1.5 shadow-card ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-800/80 dark:ring-slate-600/80">
+    <div className="inline-flex items-center gap-1 rounded-full bg-white/88 p-1 pr-1.5 shadow-[0_4px_22px_-10px_rgba(15,23,42,0.14)] ring-1 ring-slate-200/85 backdrop-blur-md dark:bg-slate-800/88 dark:ring-slate-600/80">
       {pill("ru", t(lang, "lang_ru"))}
       {pill("tg", t(lang, "lang_tg"))}
       <ThemeToggle />

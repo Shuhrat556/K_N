@@ -112,8 +112,18 @@ export function Landing() {
   const advantageKeys = ["landing_adv_1", "landing_adv_2", "landing_adv_3", "landing_adv_4", "landing_adv_5"] as const;
   const sampleCluster = clusterCopy(lang, 5);
 
+  /** Асосӣ: норанҷӣ/amber, сояи гарм, focus барои дастрасӣ */
   const ctaBtn =
-    "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-coral to-brand-coral-deep px-5 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-brand-coral/25 ring-1 ring-white/20 transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950";
+    "inline-flex min-h-[2.875rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-brand-coral-deep px-6 py-3 text-sm font-extrabold tracking-wide text-white shadow-[0_10px_36px_-8px_rgba(249,115,22,0.55)] ring-1 ring-white/35 transition duration-200 hover:shadow-[0_14px_44px_-10px_rgba(249,115,22,0.65)] hover:brightness-[1.04] active:scale-[0.98] active:brightness-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 dark:shadow-orange-950/45 dark:ring-white/20 dark:focus-visible:ring-offset-slate-950";
+
+  const secondaryBtn =
+    "inline-flex min-h-[2.875rem] items-center justify-center rounded-2xl border-2 border-slate-200/90 bg-white/90 px-6 py-3 text-sm font-extrabold text-brand-navy shadow-[0_4px_20px_-8px_rgba(15,39,68,0.18)] backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:border-sky-400/55 hover:bg-white hover:shadow-[0_12px_32px_-12px_rgba(14,165,233,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-500/55 dark:bg-slate-800/75 dark:text-sky-50 dark:shadow-black/30 dark:hover:border-sky-400/45 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-950";
+
+  const headerLoginBtn =
+    "hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50 px-4 py-2.5 text-xs font-extrabold text-brand-navy shadow-[0_2px_12px_-6px_rgba(15,23,42,0.15)] transition duration-200 hover:-translate-y-0.5 hover:border-sky-300/80 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:from-slate-800 dark:to-slate-900 dark:text-slate-100 dark:hover:border-sky-500/50 dark:focus-visible:ring-offset-slate-950 md:inline-flex lg:text-sm";
+
+  const menuIconBtn =
+    "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50 text-brand-navy shadow-[0_2px_12px_-6px_rgba(15,23,42,0.12)] transition hover:border-sky-200/80 hover:shadow-md active:scale-95 dark:border-slate-600 dark:from-slate-800 dark:to-slate-900 dark:text-slate-100 md:hidden";
 
   return (
     <div className="min-h-screen bg-slate-100 pb-24 text-ink-900 dark:bg-slate-950 dark:text-slate-100 sm:pb-0">
@@ -152,10 +162,7 @@ export function Landing() {
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <LanguageSwitcher />
-            <Link
-              to="/login"
-              className="hidden rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-extrabold text-brand-navy shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 md:inline-flex lg:text-sm"
-            >
+            <Link to="/login" className={headerLoginBtn}>
               {t(lang, "nav_login")}
             </Link>
             <motion.button type="button" onClick={onStart} whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className={`${ctaBtn} hidden md:inline-flex`}>
@@ -166,7 +173,7 @@ export function Landing() {
             </motion.button>
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-brand-navy shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 md:hidden"
+              className={menuIconBtn}
               aria-expanded={navOpen}
               aria-label="Menu"
               onClick={() => setNavOpen((v) => !v)}
@@ -272,11 +279,7 @@ export function Landing() {
                 {t(lang, "landing_cta")}
                 <span aria-hidden>→</span>
               </motion.button>
-              <motion.a
-                href="#how-it-works"
-                whileHover={{ y: -1 }}
-                className="inline-flex min-h-[2.75rem] items-center justify-center rounded-2xl border border-slate-300/90 bg-white/80 px-6 py-3 text-sm font-extrabold text-brand-navy shadow-sm backdrop-blur-sm transition hover:bg-white dark:border-white/35 dark:bg-white/10 dark:text-white dark:shadow-none dark:hover:bg-white/15"
-              >
+              <motion.a href="#how-it-works" whileHover={{ y: -2 }} whileTap={{ scale: 0.99 }} className={secondaryBtn}>
                 {t(lang, "landing_faq_link")}
               </motion.a>
             </div>
