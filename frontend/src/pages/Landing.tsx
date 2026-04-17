@@ -289,20 +289,27 @@ export function Landing() {
             initial={reduce ? false : { opacity: 0, scale: 0.94, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.65, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="order-1 lg:order-2"
+            className="order-1 flex w-full justify-center lg:order-2 lg:justify-end lg:self-center"
           >
-            <div className="relative mx-auto max-w-lg lg:max-w-none">
+            <div className="relative w-full max-w-xl sm:max-w-2xl lg:max-w-[min(100%,34rem)] xl:max-w-[min(100%,38rem)]">
               <motion.div
-                className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-sky-200/35 to-indigo-200/25 blur-3xl dark:from-sky-500/20 dark:to-indigo-600/10"
-                animate={reduce ? undefined : { opacity: [0.45, 0.75, 0.45] }}
+                className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-amber-200/25 via-sky-200/30 to-indigo-300/20 blur-3xl dark:from-amber-500/10 dark:via-sky-500/15 dark:to-indigo-600/10"
+                animate={reduce ? undefined : { opacity: [0.4, 0.7, 0.4] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               />
-              <img
-                src="/landing-hero.jpeg"
-                alt=""
-                decoding="async"
-                className="relative z-[1] mx-auto h-auto w-full max-h-[min(85vh,56rem)] max-w-5xl rounded-2xl object-contain object-center shadow-xl shadow-slate-900/15 dark:shadow-black/50 lg:max-w-6xl"
-              />
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-white to-slate-50/90 shadow-2xl shadow-slate-900/10 ring-1 ring-slate-200/90 dark:from-slate-800/90 dark:to-slate-900 dark:shadow-black/40 dark:ring-slate-600/70">
+                <img
+                  src="/landing-hero.png"
+                  alt=""
+                  width={1024}
+                  height={682}
+                  decoding="async"
+                  fetchPriority="high"
+                  loading="eager"
+                  sizes="(min-width: 1024px) 34rem, (min-width: 640px) 42rem, 100vw"
+                  className="block h-auto w-full max-h-[min(72vh,680px)] object-contain object-center sm:max-h-[min(76vh,720px)] lg:max-h-none"
+                />
+              </div>
             </div>
           </motion.div>
         </div>
