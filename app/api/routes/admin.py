@@ -2,20 +2,27 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import delete, distinct, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.models.answer import Answer
 from app.models.catalog import Cluster, Group, Question, QuestionPhase
+from app.models.result import Result, ResultStatus
+from app.models.user import User
 from app.schemas.admin import (
+    AdminStatsOut,
     ClusterIn,
     ClusterOut,
+    ClusterUpdate,
     GroupIn,
     GroupOut,
+    GroupUpdate,
     QuestionIn,
     QuestionOut,
     QuestionUpdate,
@@ -25,6 +32,21 @@ from app.schemas.admin import (
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 _UNSET = object()
+
+
+def _questions_reference_cluster(db: Session, cluster_id: int) -> bool:
+    group_ids_sq = select(Group.id).where(Group.cluster_id == cluster_id)
+    n = db.scalar(
+        select(func.count())
+        .select_from(Question)
+        .where(or_(Question.cluster_id == cluster_id, Question.group_id.in_(group_ids_sq)))
+    )
+    return (n or 0) > 0
+
+
+def _questions_reference_group(db: Session, group_id: int) -> bool:
+    n = db.scalar(select(func.count()).select_from(Question).where(Question.group_id == group_id))
+    return (n or 0) > 0
 
 
 def _question_to_out(r: Question) -> QuestionOut:
@@ -61,6 +83,41 @@ def create_cluster(body: ClusterIn, db: Session = Depends(get_db)):
     return ClusterOut(id=row.id, code=row.code, name=row.name, sort_order=row.sort_order)
 
 
+@router.patch("/clusters/{cluster_id}", response_model=ClusterOut)
+def patch_cluster(cluster_id: int, body: ClusterUpdate, db: Session = Depends(get_db)):
+    row = db.get(Cluster, cluster_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    data = body.model_dump(exclude_unset=True)
+    if "code" in data:
+        row.code = data["code"].strip()
+    if "name" in data:
+        row.name = data["name"].strip()
+    if "sort_order" in data and data["sort_order"] is not None:
+        row.sort_order = data["sort_order"]
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Cluster code must be unique") from e
+    db.refresh(row)
+    return ClusterOut(id=row.id, code=row.code, name=row.name, sort_order=row.sort_order)
+
+
+@router.delete("/clusters/{cluster_id}", status_code=204)
+def delete_cluster(cluster_id: int, db: Session = Depends(get_db)):
+    row = db.get(Cluster, cluster_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    if _questions_reference_cluster(db, cluster_id):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete cluster: reassign or delete questions that use this cluster or its groups first",
+        )
+    db.delete(row)
+    db.commit()
+
+
 @router.get("/groups", response_model=list[GroupOut])
 def list_groups(cluster_id: Optional[int] = Query(default=None), db: Session = Depends(get_db)):
     stmt = select(Group)
@@ -91,6 +148,95 @@ def create_group(body: GroupIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Group code must be unique inside cluster") from e
     db.refresh(row)
     return GroupOut(id=row.id, cluster_id=row.cluster_id, code=row.code, name=row.name, sort_order=row.sort_order)
+
+
+@router.patch("/groups/{group_id}", response_model=GroupOut)
+def patch_group(group_id: int, body: GroupUpdate, db: Session = Depends(get_db)):
+    row = db.get(Group, group_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Group not found")
+    data = body.model_dump(exclude_unset=True)
+    if "cluster_id" in data:
+        if not db.get(Cluster, data["cluster_id"]):
+            raise HTTPException(status_code=404, detail="Cluster not found")
+        new_cid = data["cluster_id"]
+        if new_cid != row.cluster_id:
+            db.execute(
+                update(Question)
+                .where(Question.group_id == group_id, Question.phase == QuestionPhase.MAIN)
+                .values(cluster_id=new_cid)
+            )
+            row.cluster_id = new_cid
+    if "code" in data:
+        row.code = data["code"].strip()
+    if "name" in data:
+        row.name = data["name"].strip()
+    if "sort_order" in data and data["sort_order"] is not None:
+        row.sort_order = data["sort_order"]
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Group code must be unique inside cluster") from e
+    db.refresh(row)
+    return GroupOut(id=row.id, cluster_id=row.cluster_id, code=row.code, name=row.name, sort_order=row.sort_order)
+
+
+@router.delete("/groups/{group_id}", status_code=204)
+def delete_group(group_id: int, db: Session = Depends(get_db)):
+    row = db.get(Group, group_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if _questions_reference_group(db, group_id):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete group: reassign or delete questions that use this group first",
+        )
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/stats", response_model=AdminStatsOut)
+def admin_stats(db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+
+    total_users = db.scalar(select(func.count()).select_from(User)) or 0
+    total_results = db.scalar(select(func.count()).select_from(Result)) or 0
+    completed_results = db.scalar(
+        select(func.count()).select_from(Result).where(Result.status == ResultStatus.COMPLETED)
+    ) or 0
+
+    status_rows = db.execute(select(Result.status, func.count()).group_by(Result.status)).all()
+    results_by_status = {status.value: int(cnt) for status, cnt in status_rows}
+
+    results_updated_last_24h = (
+        db.scalar(select(func.count()).select_from(Result).where(Result.updated_at >= day_ago)) or 0
+    )
+    active_users_last_24h = (
+        db.scalar(
+            select(func.count(distinct(Result.user_id))).select_from(Result).where(Result.updated_at >= day_ago)
+        )
+        or 0
+    )
+    users_created_last_7_days = (
+        db.scalar(select(func.count()).select_from(User).where(User.created_at >= week_ago)) or 0
+    )
+    total_questions = db.scalar(select(func.count()).select_from(Question)) or 0
+    total_answers = db.scalar(select(func.count()).select_from(Answer)) or 0
+
+    return AdminStatsOut(
+        total_users=total_users,
+        total_results=total_results,
+        results_by_status=results_by_status,
+        completed_results=completed_results,
+        results_updated_last_24h=results_updated_last_24h,
+        active_users_last_24h=active_users_last_24h,
+        users_created_last_7_days=users_created_last_7_days,
+        total_questions=total_questions,
+        total_answers=total_answers,
+    )
 
 
 @router.get("/questions", response_model=list[QuestionOut])
@@ -197,3 +343,13 @@ def patch_question(question_id: int, body: QuestionUpdate, db: Session = Depends
     db.commit()
     db.refresh(row)
     return _question_to_out(row)
+
+
+@router.delete("/questions/{question_id}", status_code=204)
+def delete_question(question_id: int, db: Session = Depends(get_db)):
+    row = db.get(Question, question_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Question not found")
+    db.execute(delete(Answer).where(Answer.question_id == question_id))
+    db.delete(row)
+    db.commit()

@@ -108,3 +108,15 @@ export type AdminQuestionUpdate = {
   option_labels?: string[] | null;
   option_labels_tj?: string[] | null;
 };
+
+export type AdminStats = {
+  total_users: number;
+  total_results: number;
+  results_by_status: Record<string, number>;
+  completed_results: number;
+  results_updated_last_24h: number;
+  active_users_last_24h: number;
+  users_created_last_7_days: number;
+  total_questions: number;
+  total_answers: number;
+};

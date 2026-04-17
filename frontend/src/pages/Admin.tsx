@@ -7,12 +7,37 @@ import {
   createAdminCluster,
   createAdminGroup,
   createAdminQuestion,
+  deleteAdminCluster,
+  deleteAdminGroup,
+  deleteAdminQuestion,
   fetchAdminClusters,
   fetchAdminGroups,
   fetchAdminQuestions,
+  fetchAdminStats,
+  updateAdminCluster,
+  updateAdminGroup,
   updateAdminQuestion,
 } from "../api/kasbnoma";
-import type { AdminCluster, AdminGroup, AdminQuestion, QuestionPhase, ReadinessKind } from "../api/types";
+import type {
+  AdminCluster,
+  AdminGroup,
+  AdminQuestion,
+  AdminStats,
+  QuestionPhase,
+  ReadinessKind,
+} from "../api/types";
+
+type ClusterModalState = { id: number; code: string; name: string; sort_order: number };
+type GroupModalState = { id: number; cluster_id: number; code: string; name: string; sort_order: number };
+
+const RESULT_STATUS_LABELS: Record<string, string> = {
+  awaiting_readiness: "Ожидает готовность",
+  readiness_failed: "Готовность не пройдена",
+  ready_for_main: "Готов к основному",
+  main_in_progress: "Основной блок",
+  adaptive_pending: "Адаптивный этап",
+  completed: "Завершено",
+};
 
 type EditorState = {
   question: AdminQuestion;
@@ -61,6 +86,18 @@ export function Admin() {
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"structure" | "questions" | "stats">("structure");
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [clusterModal, setClusterModal] = useState<ClusterModalState | null>(null);
+  const [groupModal, setGroupModal] = useState<GroupModalState | null>(null);
+  const [catalogMutating, setCatalogMutating] = useState<string | null>(null);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [groupCatalogSearch, setGroupCatalogSearch] = useState("");
+  const [catalogGroupClusterFilter, setCatalogGroupClusterFilter] = useState<number | "all">("all");
+  const [filterClusterId, setFilterClusterId] = useState<number | "all">("all");
+  const [filterGroupId, setFilterGroupId] = useState<number | "all">("all");
 
   const inputClass =
     "w-full rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-medium text-ink-900 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-950/60";
@@ -77,10 +114,50 @@ export function Admin() {
     [groups, editor],
   );
 
+  const clusterById = useMemo(() => new Map(clusters.map((c) => [c.id, c])), [clusters]);
+  const groupById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
+
+  const filteredCatalogClusters = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
+    if (!q) return clusters;
+    return clusters.filter(
+      (c) =>
+        c.code.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        String(c.id).includes(q),
+    );
+  }, [clusters, catalogSearch]);
+
+  const filteredCatalogGroups = useMemo(() => {
+    let rows = groups;
+    if (catalogGroupClusterFilter !== "all") {
+      rows = rows.filter((g) => g.cluster_id === catalogGroupClusterFilter);
+    }
+    const q = groupCatalogSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (g) =>
+        g.code.toLowerCase().includes(q) ||
+        g.name.toLowerCase().includes(q) ||
+        String(g.id).includes(q) ||
+        String(g.cluster_id).includes(q),
+    );
+  }, [groups, catalogGroupClusterFilter, groupCatalogSearch]);
+
+  const groupsForQuestionFilter = useMemo(
+    () => (filterClusterId === "all" ? groups : groups.filter((g) => g.cluster_id === filterClusterId)),
+    [groups, filterClusterId],
+  );
+
   const filteredQuestions = useMemo(() => {
     const qn = search.trim().toLowerCase();
     return questions.filter((q) => {
       if (listPhase !== "all" && q.phase !== listPhase) return false;
+      if (filterClusterId !== "all" || filterGroupId !== "all") {
+        if (q.phase !== "main") return false;
+        if (filterClusterId !== "all" && q.cluster_id !== filterClusterId) return false;
+        if (filterGroupId !== "all" && q.group_id !== filterGroupId) return false;
+      }
       if (!qn) return true;
       return (
         q.text.toLowerCase().includes(qn) ||
@@ -88,7 +165,7 @@ export function Admin() {
         String(q.id).includes(qn)
       );
     });
-  }, [questions, listPhase, search]);
+  }, [questions, listPhase, search, filterClusterId, filterGroupId]);
 
   const loadAll = async () => {
     setBusy(true);
@@ -119,6 +196,28 @@ export function Admin() {
   }, []);
 
   useEffect(() => {
+    if (activeTab !== "stats") return;
+    let cancelled = false;
+    void (async () => {
+      setStatsLoading(true);
+      setError(null);
+      try {
+        const s = await fetchAdminStats();
+        if (!cancelled) setAdminStats(s);
+      } catch (e) {
+        if (!cancelled) {
+          setError(isAxiosError(e) ? String(e.response?.data?.detail ?? e.message) : "Не удалось загрузить статистику");
+        }
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
     if (!groupsForSelectedCluster.some((g) => g.id === questionGroupId)) {
       setQuestionGroupId(groupsForSelectedCluster[0]?.id ?? 0);
     }
@@ -132,6 +231,13 @@ export function Admin() {
       );
     }
   }, [editor, groupsForEditorCluster]);
+
+  useEffect(() => {
+    if (filterClusterId === "all") return;
+    if (filterGroupId === "all") return;
+    const g = groups.find((x) => x.id === filterGroupId);
+    if (!g || g.cluster_id !== filterClusterId) setFilterGroupId("all");
+  }, [filterClusterId, filterGroupId, groups]);
 
   const openEditor = (q: AdminQuestion) => {
     const n = q.phase === "readiness" ? 3 : 5;
@@ -195,6 +301,118 @@ export function Admin() {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось сохранить");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveClusterModal = async () => {
+    if (!clusterModal) return;
+    setCatalogMutating(`cluster-${clusterModal.id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      await updateAdminCluster(clusterModal.id, {
+        code: clusterModal.code.trim(),
+        name: clusterModal.name.trim(),
+        sort_order: clusterModal.sort_order,
+      });
+      setMessage("Кластер сохранён");
+      setClusterModal(null);
+      await loadAll();
+    } catch (err) {
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось сохранить");
+    } finally {
+      setCatalogMutating(null);
+    }
+  };
+
+  const onDeleteCluster = async (c: AdminCluster) => {
+    if (
+      !window.confirm(
+        `Удалить кластер «${c.name}»?\nСначала удалите или переназначьте все вопросы, которые на него ссылаются.`,
+      )
+    ) {
+      return;
+    }
+    setCatalogMutating(`del-cluster-${c.id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      await deleteAdminCluster(c.id);
+      if (clusterModal?.id === c.id) setClusterModal(null);
+      setMessage("Кластер удалён");
+      await loadAll();
+    } catch (err) {
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось удалить");
+    } finally {
+      setCatalogMutating(null);
+    }
+  };
+
+  const saveGroupModal = async () => {
+    if (!groupModal) return;
+    setCatalogMutating(`group-${groupModal.id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      await updateAdminGroup(groupModal.id, {
+        cluster_id: groupModal.cluster_id,
+        code: groupModal.code.trim(),
+        name: groupModal.name.trim(),
+        sort_order: groupModal.sort_order,
+      });
+      setMessage("Группа сохранена");
+      setGroupModal(null);
+      await loadAll();
+    } catch (err) {
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось сохранить");
+    } finally {
+      setCatalogMutating(null);
+    }
+  };
+
+  const onDeleteGroup = async (g: AdminGroup) => {
+    if (
+      !window.confirm(
+        `Удалить группу «${g.name}»?\nСначала удалите или переназначьте вопросы основного блока с этой группой.`,
+      )
+    ) {
+      return;
+    }
+    setCatalogMutating(`del-group-${g.id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      await deleteAdminGroup(g.id);
+      if (groupModal?.id === g.id) setGroupModal(null);
+      setMessage("Группа удалена");
+      await loadAll();
+    } catch (err) {
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось удалить");
+    } finally {
+      setCatalogMutating(null);
+    }
+  };
+
+  const onDeleteQuestion = async (q: AdminQuestion) => {
+    if (
+      !window.confirm(
+        `Удалить вопрос #${q.id}?\nОтветы пользователей по этому вопросу будут удалены из базы.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(q.id);
+    setError(null);
+    setMessage(null);
+    try {
+      await deleteAdminQuestion(q.id);
+      if (editor?.question.id === q.id) setEditor(null);
+      setMessage("Вопрос удалён");
+      await loadAll();
+    } catch (err) {
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось удалить");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -342,47 +560,269 @@ export function Admin() {
             ) : null}
           </AnimatePresence>
         </div>
-      </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className={`mt-6 ${sectionCardClass}`}
-      >
-        <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Категории и подкатегории (просмотр)</h2>
-        <div className="mt-4 grid gap-6 lg:grid-cols-2">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Кластеры</div>
-            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
-              {clusters.map((c) => (
-                <li key={c.id} className="rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
-                  <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{c.code}</span> · {c.name}{" "}
-                  <span className="text-ink-500 dark:text-slate-400">sort {c.sort_order}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Группы</div>
-            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
-              {groups.map((g) => (
-                <li key={g.id} className="rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
-                  <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{g.code}</span> · {g.name}{" "}
-                  <span className="text-ink-500 dark:text-slate-400">cluster {g.cluster_id}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="relative mt-6 flex flex-wrap gap-2 border-t border-slate-200/70 pt-5 dark:border-slate-700/60">
+          {(
+            [
+              { id: "structure" as const, label: "Кластеры и группы" },
+              { id: "questions" as const, label: "Вопросы" },
+              { id: "stats" as const, label: "Статистика" },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              className={
+                activeTab === t.id
+                  ? "rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-soft"
+                  : "rounded-2xl bg-white/90 px-4 py-2.5 text-xs font-extrabold text-ink-800 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+              }
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="mt-6 grid gap-6 lg:grid-cols-2"
-      >
+      {activeTab === "stats" && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className={`mt-6 ${sectionCardClass}`}
+        >
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Статистика платформы</h2>
+              <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
+                Пользователи, сессии теста и активность за последние сутки (по обновлению сессии).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void (async () => {
+                  setStatsLoading(true);
+                  setError(null);
+                  try {
+                    setAdminStats(await fetchAdminStats());
+                  } catch (e) {
+                    setError(
+                      isAxiosError(e) ? String(e.response?.data?.detail ?? e.message) : "Не удалось обновить",
+                    );
+                  } finally {
+                    setStatsLoading(false);
+                  }
+                })();
+              }}
+              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+            >
+              Обновить цифры
+            </button>
+          </div>
+
+          {statsLoading && !adminStats ? (
+            <div className="mt-6 text-sm font-medium text-ink-500 dark:text-slate-400">Загрузка…</div>
+          ) : adminStats ? (
+            <>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {(
+                  [
+                    ["Всего пользователей", String(adminStats.total_users)],
+                    ["Сессий теста (всего)", String(adminStats.total_results)],
+                    ["Завершённых тестов", String(adminStats.completed_results)],
+                    ["Активных за 24 ч (уник. пользователи)", String(adminStats.active_users_last_24h)],
+                    ["Сессий с активностью за 24 ч", String(adminStats.results_updated_last_24h)],
+                    ["Новых пользователей за 7 дней", String(adminStats.users_created_last_7_days)],
+                    ["Вопросов в банке", String(adminStats.total_questions)],
+                    ["Ответов сохранено", String(adminStats.total_answers)],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-4 ring-1 ring-slate-200/70 dark:from-slate-800/80 dark:to-slate-900/90 dark:ring-slate-600"
+                  >
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                      {label}
+                    </div>
+                    <div className="mt-1 text-2xl font-extrabold tabular-nums text-ink-900 dark:text-slate-50">{value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6">
+                <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                  Сессии по статусу
+                </div>
+                <ul className="mt-2 space-y-1 text-sm font-medium text-ink-800 dark:text-slate-200">
+                  {Object.entries(adminStats.results_by_status)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([status, count]) => (
+                      <li
+                        key={status}
+                        className="flex justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600"
+                      >
+                        <span>{RESULT_STATUS_LABELS[status] ?? status}</span>
+                        <span className="tabular-nums text-ink-500 dark:text-slate-400">{count}</span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            </>
+          ) : (
+            <div className="mt-6 text-sm text-ink-500 dark:text-slate-400">Нет данных.</div>
+          )}
+        </motion.div>
+      )}
+
+      {activeTab === "structure" && (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className={`mt-6 ${sectionCardClass}`}
+          >
+            <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Каталог кластеров и групп</h2>
+            <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
+              Поиск по коду и названию. Ниже — формы для добавления нового кластера и специализации (группы).
+            </p>
+            <div className="mt-4 grid gap-6 lg:grid-cols-2">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                  Кластеры
+                </label>
+                <input
+                  className={`mt-2 ${inputClass}`}
+                  placeholder="Поиск кластера…"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  aria-label="Поиск кластера"
+                />
+                <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
+                  {filteredCatalogClusters.map((c) => (
+                    <li
+                      key={c.id}
+                      className="flex flex-col gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{c.code}</span> · {c.name}{" "}
+                        <span className="text-ink-500 dark:text-slate-400">sort {c.sort_order}</span>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setClusterModal({
+                              id: c.id,
+                              code: c.code,
+                              name: c.name,
+                              sort_order: c.sort_order,
+                            })
+                          }
+                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
+                        >
+                          Изменить
+                        </button>
+                        <button
+                          type="button"
+                          disabled={catalogMutating === `del-cluster-${c.id}`}
+                          onClick={() => void onDeleteCluster(c)}
+                          className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {!filteredCatalogClusters.length ? (
+                  <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
+                ) : null}
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                  Группы (ихтисос)
+                </label>
+                <select
+                  className={`mt-2 ${inputClass}`}
+                  value={catalogGroupClusterFilter === "all" ? "" : catalogGroupClusterFilter}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCatalogGroupClusterFilter(v === "" ? "all" : Number(v));
+                  }}
+                  aria-label="Фильтр групп по кластеру"
+                >
+                  <option value="">Все кластеры</option>
+                  {clusters.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className={`mt-2 ${inputClass}`}
+                  placeholder="Поиск группы…"
+                  value={groupCatalogSearch}
+                  onChange={(e) => setGroupCatalogSearch(e.target.value)}
+                  aria-label="Поиск группы"
+                />
+                <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
+                  {filteredCatalogGroups.map((g) => {
+                    const c = clusterById.get(g.cluster_id);
+                    return (
+                      <li
+                        key={g.id}
+                        className="flex flex-col gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{g.code}</span> · {g.name}{" "}
+                          <span className="text-ink-500 dark:text-slate-400">
+                            {c ? c.name : `cluster ${g.cluster_id}`}
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setGroupModal({
+                                id: g.id,
+                                cluster_id: g.cluster_id,
+                                code: g.code,
+                                name: g.name,
+                                sort_order: g.sort_order,
+                              })
+                            }
+                            className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
+                          >
+                            Изменить
+                          </button>
+                          <button
+                            type="button"
+                            disabled={catalogMutating === `del-group-${g.id}`}
+                            onClick={() => void onDeleteGroup(g)}
+                            className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {!filteredCatalogGroups.length ? (
+                  <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
+                ) : null}
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-6 grid gap-6 lg:grid-cols-2"
+          >
         <form className={sectionCardClass} onSubmit={onCreateCluster}>
           <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить категорию (кластер)</h2>
           <div className="mt-4 space-y-3">
@@ -467,8 +907,12 @@ export function Admin() {
             Добавить подкатегорию
           </motion.button>
         </form>
-      </motion.div>
+          </motion.div>
+        </>
+      )}
 
+      {activeTab === "questions" && (
+        <>
       <motion.form
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -580,16 +1024,55 @@ export function Admin() {
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
             <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Вопросы</h2>
-            <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">Редактирование текста, привязки и подписей кнопок.</p>
+            <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
+              Фильтры по фазе, кластеру и группе затрагивают только основной блок. Поиск — по тексту и номеру.
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <select className={inputClass + " sm:max-w-xs"} value={listPhase} onChange={(e) => setListPhase(e.target.value as typeof listPhase)}>
+          <div className="flex max-w-full flex-col gap-2 sm:max-w-2xl sm:flex-row sm:flex-wrap sm:items-end">
+            <select
+              className={inputClass + " min-w-[10rem] flex-1"}
+              value={listPhase}
+              onChange={(e) => setListPhase(e.target.value as typeof listPhase)}
+            >
               <option value="all">Все фазы</option>
               <option value="readiness">Готовность</option>
               <option value="main">Основной блок</option>
             </select>
+            <select
+              className={inputClass + " min-w-[10rem] flex-1"}
+              value={filterClusterId === "all" ? "" : filterClusterId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilterClusterId(v === "" ? "all" : Number(v));
+              }}
+              aria-label="Фильтр по кластеру"
+            >
+              <option value="">Все кластеры</option>
+              {clusters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className={inputClass + " min-w-[10rem] flex-1"}
+              value={filterGroupId === "all" ? "" : filterGroupId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilterGroupId(v === "" ? "all" : Number(v));
+              }}
+              disabled={filterClusterId !== "all" && !groupsForQuestionFilter.length}
+              aria-label="Фильтр по группе"
+            >
+              <option value="">Все группы</option>
+              {(filterClusterId === "all" ? groups : groupsForQuestionFilter).map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name} ({g.code})
+                </option>
+              ))}
+            </select>
             <input
-              className={inputClass + " sm:max-w-xs"}
+              className={inputClass + " min-w-[12rem] flex-1"}
               placeholder="Поиск по тексту или id"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -608,23 +1091,42 @@ export function Admin() {
                 className="flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-slate-50 to-white p-3 ring-1 ring-slate-200/70 dark:from-slate-800/90 dark:to-slate-900/90 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-indigo-700">
+                  <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
                     #{q.id} · {q.phase}
                     {q.readiness_kind ? ` · ${q.readiness_kind}` : ""}
                   </div>
                   <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink-900 dark:text-slate-100">{q.text}</div>
                   <div className="mt-1 text-xs font-medium text-ink-500 dark:text-slate-400">
-                    cluster={q.cluster_id ?? "—"} · group={q.group_id ?? "—"} · sort {q.sort_order}
+                    {q.phase === "main" ? (
+                      <>
+                        {q.cluster_id != null ? clusterById.get(q.cluster_id)?.name ?? `кластер ${q.cluster_id}` : "—"}
+                        {" · "}
+                        {q.group_id != null ? groupById.get(q.group_id)?.name ?? `группа ${q.group_id}` : "—"}
+                      </>
+                    ) : (
+                      <>без кластера / группы</>
+                    )}{" "}
+                    · sort {q.sort_order}
                     {q.option_labels?.length ? ` · варианты: ${q.option_labels.length}` : ""}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openEditor(q)}
-                  className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white shadow-card transition hover:brightness-110"
-                >
-                  Изменить
-                </button>
+                <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => openEditor(q)}
+                    className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white shadow-card transition hover:brightness-110 dark:bg-indigo-600"
+                  >
+                    Изменить
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingId === q.id}
+                    onClick={() => void onDeleteQuestion(q)}
+                    className="rounded-xl bg-white px-4 py-2 text-xs font-extrabold text-rose-700 ring-1 ring-rose-200/90 transition hover:bg-rose-50 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/60 dark:hover:bg-rose-950/40"
+                  >
+                    {deletingId === q.id ? "Удаление…" : "Удалить"}
+                  </button>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
@@ -633,6 +1135,8 @@ export function Admin() {
           ) : null}
         </div>
       </motion.div>
+        </>
+      )}
 
       <AnimatePresence>
         {editor ? (
@@ -762,6 +1266,167 @@ export function Admin() {
                   type="button"
                   disabled={saving}
                   onClick={() => setEditor(null)}
+                  className="rounded-2xl bg-white px-4 py-2.5 text-sm font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+                >
+                  Отмена
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {clusterModal ? (
+          <motion.div
+            key="cluster-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-4 backdrop-blur-sm sm:items-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-cluster-edit-title"
+          >
+            <motion.div
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 16, opacity: 0 }}
+              className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-soft ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-600"
+            >
+              <div id="admin-cluster-edit-title" className="text-lg font-extrabold text-ink-900 dark:text-slate-50">
+                Кластер #{clusterModal.id}
+              </div>
+              <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Код
+              </label>
+              <input
+                className={`mt-1 ${inputClass}`}
+                value={clusterModal.code}
+                onChange={(e) => setClusterModal({ ...clusterModal, code: e.target.value })}
+              />
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Название
+              </label>
+              <input
+                className={`mt-1 ${inputClass}`}
+                value={clusterModal.name}
+                onChange={(e) => setClusterModal({ ...clusterModal, name: e.target.value })}
+              />
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Сортировка
+              </label>
+              <input
+                className={`mt-1 ${inputClass}`}
+                type="number"
+                value={clusterModal.sort_order}
+                onChange={(e) =>
+                  setClusterModal({ ...clusterModal, sort_order: Number(e.target.value) || 0 })
+                }
+              />
+              <div className="mt-6 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={!!catalogMutating}
+                  onClick={() => void saveClusterModal()}
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft disabled:opacity-60"
+                >
+                  {catalogMutating === `cluster-${clusterModal.id}` ? "Сохранение…" : "Сохранить"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!!catalogMutating}
+                  onClick={() => setClusterModal(null)}
+                  className="rounded-2xl bg-white px-4 py-2.5 text-sm font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+                >
+                  Отмена
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {groupModal ? (
+          <motion.div
+            key="group-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-4 backdrop-blur-sm sm:items-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-group-edit-title"
+          >
+            <motion.div
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 16, opacity: 0 }}
+              className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-soft ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-600"
+            >
+              <div id="admin-group-edit-title" className="text-lg font-extrabold text-ink-900 dark:text-slate-50">
+                Группа #{groupModal.id}
+              </div>
+              <p className="mt-1 text-xs text-ink-600 dark:text-slate-400">
+                Смена кластера обновит привязку основных вопросов этой группы.
+              </p>
+              <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Кластер
+              </label>
+              <select
+                className={`mt-1 ${inputClass}`}
+                value={groupModal.cluster_id}
+                onChange={(e) =>
+                  setGroupModal({ ...groupModal, cluster_id: Number(e.target.value) })
+                }
+              >
+                {clusters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Код
+              </label>
+              <input
+                className={`mt-1 ${inputClass}`}
+                value={groupModal.code}
+                onChange={(e) => setGroupModal({ ...groupModal, code: e.target.value })}
+              />
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Название
+              </label>
+              <input
+                className={`mt-1 ${inputClass}`}
+                value={groupModal.name}
+                onChange={(e) => setGroupModal({ ...groupModal, name: e.target.value })}
+              />
+              <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                Сортировка
+              </label>
+              <input
+                className={`mt-1 ${inputClass}`}
+                type="number"
+                value={groupModal.sort_order}
+                onChange={(e) =>
+                  setGroupModal({ ...groupModal, sort_order: Number(e.target.value) || 0 })
+                }
+              />
+              <div className="mt-6 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={!!catalogMutating}
+                  onClick={() => void saveGroupModal()}
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft disabled:opacity-60"
+                >
+                  {catalogMutating === `group-${groupModal.id}` ? "Сохранение…" : "Сохранить"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!!catalogMutating}
+                  onClick={() => setGroupModal(null)}
                   className="rounded-2xl bg-white px-4 py-2.5 text-sm font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
                 >
                   Отмена

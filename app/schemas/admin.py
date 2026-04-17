@@ -35,6 +35,31 @@ class GroupOut(BaseModel):
     sort_order: int
 
 
+class ClusterUpdate(BaseModel):
+    code: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    sort_order: Optional[int] = None
+
+
+class GroupUpdate(BaseModel):
+    cluster_id: Optional[int] = None
+    code: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    sort_order: Optional[int] = None
+
+
+class AdminStatsOut(BaseModel):
+    total_users: int
+    total_results: int
+    results_by_status: dict[str, int]
+    completed_results: int
+    results_updated_last_24h: int
+    active_users_last_24h: int
+    users_created_last_7_days: int
+    total_questions: int
+    total_answers: int
+
+
 def validate_option_labels_for_phase(phase: QuestionPhase, labels: Optional[list], labels_tj: Optional[list]) -> None:
     n = 3 if phase == QuestionPhase.READINESS else 5
     if labels is not None:

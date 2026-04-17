@@ -4,6 +4,7 @@ import type {
   AdminGroup,
   AdminQuestion,
   AdminQuestionUpdate,
+  AdminStats,
   MainQuestion,
   ReadinessQuestion,
   ReadinessKind,
@@ -66,6 +67,18 @@ export async function createAdminCluster(payload: {
   return data;
 }
 
+export async function updateAdminCluster(
+  id: number,
+  payload: { code?: string; name?: string; sort_order?: number },
+): Promise<AdminCluster> {
+  const { data } = await api.patch<AdminCluster>(`/admin/clusters/${id}`, payload);
+  return data;
+}
+
+export async function deleteAdminCluster(id: number): Promise<void> {
+  await api.delete(`/admin/clusters/${id}`);
+}
+
 export async function fetchAdminGroups(clusterId?: number): Promise<AdminGroup[]> {
   const { data } = await api.get<AdminGroup[]>("/admin/groups", {
     params: clusterId ? { cluster_id: clusterId } : undefined,
@@ -80,6 +93,23 @@ export async function createAdminGroup(payload: {
   sort_order: number;
 }): Promise<AdminGroup> {
   const { data } = await api.post<AdminGroup>("/admin/groups", payload);
+  return data;
+}
+
+export async function updateAdminGroup(
+  id: number,
+  payload: { cluster_id?: number; code?: string; name?: string; sort_order?: number },
+): Promise<AdminGroup> {
+  const { data } = await api.patch<AdminGroup>(`/admin/groups/${id}`, payload);
+  return data;
+}
+
+export async function deleteAdminGroup(id: number): Promise<void> {
+  await api.delete(`/admin/groups/${id}`);
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
+  const { data } = await api.get<AdminStats>("/admin/stats");
   return data;
 }
 
@@ -108,4 +138,8 @@ export async function createAdminQuestion(payload: {
 export async function updateAdminQuestion(id: number, payload: AdminQuestionUpdate): Promise<AdminQuestion> {
   const { data } = await api.patch<AdminQuestion>(`/admin/questions/${id}`, payload);
   return data;
+}
+
+export async function deleteAdminQuestion(id: number): Promise<void> {
+  await api.delete(`/admin/questions/${id}`);
 }
