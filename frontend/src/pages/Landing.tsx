@@ -413,9 +413,7 @@ export function Landing() {
                 transition={{ duration: 0.45, delay: reduce ? 0 : i * 0.05 }}
                 className="flex gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm font-semibold leading-relaxed text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               >
-                <span className="text-lg" aria-hidden>
-                  ✅
-                </span>
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600" aria-hidden />
                 <span>{t(lang, key)}</span>
               </motion.li>
             ))}
