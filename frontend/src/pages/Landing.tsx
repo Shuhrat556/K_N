@@ -300,10 +300,8 @@ export function Landing() {
               <img
                 src="/landing-hero.png"
                 alt=""
-                width={1200}
-                height={900}
                 decoding="async"
-                className="relative z-[1] mx-auto w-full max-w-lg rounded-2xl object-cover shadow-xl shadow-slate-900/15 dark:shadow-black/50 lg:max-w-none"
+                className="relative z-[1] mx-auto h-auto w-full max-h-[min(85vh,56rem)] max-w-5xl rounded-2xl object-contain object-center shadow-xl shadow-slate-900/15 dark:shadow-black/50 lg:max-w-6xl"
               />
             </div>
           </motion.div>
