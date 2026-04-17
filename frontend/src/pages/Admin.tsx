@@ -284,7 +284,7 @@ export function Admin() {
 
           <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-indigo-700/80 dark:text-indigo-300/90">Касбнома</div>
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-indigo-700/80 dark:text-indigo-300/90">Kasbnamo</div>
             <div className="mt-1 text-2xl font-extrabold text-ink-900 dark:text-slate-50">Админ-панель</div>
             <p className="mt-2 text-sm font-medium text-ink-700 dark:text-slate-300">
               Откройте по адресу <span className="font-mono text-ink-900 dark:text-slate-100">/admin</span>. Категории, подкатегории, вопросы

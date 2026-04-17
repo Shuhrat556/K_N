@@ -7,7 +7,7 @@ const ru: Dict = {
   lang_tg: "Тоҷикӣ",
   theme_light: "Светлая тема",
   theme_dark: "Тёмная тема",
-  brand: "Касбнома",
+  brand: "Kasbnamo",
   landing_kicker: "Профессиональная диагностика",
   landing_title: "Помощник по выбору карьеры",
   landing_sub:
@@ -189,7 +189,7 @@ const tg: Dict = {
   lang_tg: "Тоҷикӣ",
   theme_light: "Рӯшноӣ",
   theme_dark: "Торикӣ",
-  brand: "Касбнома",
+  brand: "Kasbnamo",
   landing_kicker: "Диагностикаи касбӣ",
   landing_title: "Ёрдамчӣ барои интихоби касб",
   landing_sub:
