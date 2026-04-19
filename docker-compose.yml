@@ -1,6 +1,10 @@
+version: '3.8'
+
 services:
+  # PostgreSQL Database
   db:
     image: postgres:16-alpine
+    container_name: kasbnoma_db
     environment:
       POSTGRES_USER: kasbnoma
       POSTGRES_PASSWORD: kasbnoma
@@ -9,6 +13,51 @@ services:
       - "5432:5432"
     volumes:
       - kasbnoma_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kasbnoma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kasbnoma_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://kasbnoma:kasbnoma@db:5432/kasbnoma
+      CORS_ORIGINS: "http://localhost:3000,http://frontend:3000,http://127.0.0.1:3000"
+      APP_NAME: "Kasbnoma API"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:create_app --host 0.0.0.0 --port 8000 --factory --reload
+
+  # Frontend (React + Express)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: kasbnoma_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      PORT: 3000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
 
 volumes:
   kasbnoma_pg:
+
+networks:
+  default:
+    name: kasbnoma_network
