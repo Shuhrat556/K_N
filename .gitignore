@@ -6,3 +6,9 @@ __pycache__/
 .pytest_cache/
 .env
 *.sqlite3
+
+# Node / Next (platform/)
+platform/**/node_modules/
+platform/**/dist/
+platform/web/.next/
+platform/web/out/

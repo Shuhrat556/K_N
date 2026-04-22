@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String        @id @default(uuid())
+  createdAt DateTime      @default(now())
+  sessions  TestSession[]
+  results   Result[]
+}
+
+model Cluster {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  questions Question[]
+  faculties Faculty[]
+}
+
+/// READINESS = warmup (8). MAIN = pool (200). Adaptive uses MAIN questions at answer-time.
+model Question {
+  id               Int         @id @default(autoincrement())
+  text             String
+  clusterId        Int?
+  cluster          Cluster?    @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  phase            QuestionPhase
+  sortOrder        Int         @default(0)
+  /// For READINESS only: weights per choice index [w0,w1,w2] summing contribution (-1,0,+1)
+  readinessWeights Json?
+  answers          Answer[]
+
+  @@index([phase])
+  @@index([clusterId, phase])
+}
+
+enum QuestionPhase {
+  READINESS
+  MAIN
+}
+
+model Faculty {
+  id               Int         @id @default(autoincrement())
+  university       String
+  name             String
+  clusterId        Int
+  cluster          Cluster     @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  city             String
+  language         String
+  type             FacultyType
+  mode             FacultyMode
+  scoreRequirement Int
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@unique([university, name, clusterId, city])
+  @@index([clusterId])
+  @@index([city])
+  @@index([clusterId, city])
+}
+
+enum FacultyType {
+  FREE
+  PAID
+}
+
+enum FacultyMode {
+  ONLINE
+  OFFLINE
+}
+
+model TestSession {
+  id                  String        @id @default(uuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status              SessionStatus @default(AWAITING_WARMUP)
+  warmupScore         Int?
+  warmupOutcome       String?
+  clusterScoresJson   Json?
+  topClusterId        Int?
+  secondClusterId     Int?
+  mainQuestionIds     Json?
+  adaptiveQuestionIds Json?
+  adaptiveClusterPair Json?
+  /// Raw summed score for the winning cluster (for faculty smart filter)
+  userClusterScore    Float?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  answers             Answer[]
+}
+
+enum SessionStatus {
+  AWAITING_WARMUP
+  WARMUP_WARNING
+  WARMUP_BLOCKED
+  READY_FOR_MAIN
+  MAIN_IN_PROGRESS
+  ADAPTIVE_PENDING
+  COMPLETED
+}
+
+model Answer {
+  id         Int           @id @default(autoincrement())
+  sessionId  String
+  session    TestSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId Int
+  question   Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  value      Int
+  phase      AnswerPhase
+
+  @@unique([sessionId, questionId, phase])
+  @@index([sessionId])
+}
+
+enum AnswerPhase {
+  READINESS
+  MAIN
+  ADAPTIVE
+}
+
+model Result {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String   @unique
+  clusterId Int
+  scoreJson Json
+  createdAt DateTime @default(now())
+}
