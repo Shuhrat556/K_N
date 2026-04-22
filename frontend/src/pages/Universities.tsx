@@ -1,113 +1,62 @@
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { isAxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
+import { fetchAcademicSpecialties } from "../api/kasbnoma";
+import type { AcademicSpecialty } from "../api/types";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
-import { universities, type University } from "../data/universities";
 import { t } from "../i18n/translations";
 import { useAppStore } from "../store/useAppStore";
-
-type Loc = "all" | University["location"];
-type Dist = University["district"];
-type Study = "all" | University["studyType"];
-type LangF = "all" | University["language"];
-type Price = "all" | University["price"];
-
-function locLabel(lang: "ru" | "tg", loc: Loc) {
-  const map: Record<"ru" | "tg", Record<string, string>> = {
-    ru: {
-      all: "Все",
-      dushanbe: "Душанбе",
-      moscow: "Москва",
-      remote: "Онлайн",
-      bokhtar: "Бохтар",
-      khujand: "Худжанд",
-    },
-    tg: {
-      all: "Ҳама",
-      dushanbe: "Душанбе",
-      moscow: "Москва",
-      remote: "Онлайн",
-      bokhtar: "Бохтар",
-      khujand: "Хучанд",
-    },
-  };
-  return map[lang][loc] ?? loc;
-}
-
-function studyLabel(lang: "ru" | "tg", v: Study) {
-  const map: Record<"ru" | "tg", Record<string, string>> = {
-    ru: {
-      all: "Все",
-      "full-time": "Очная",
-      "part-time": "Заочная",
-      online: "Дистанционно",
-    },
-    tg: {
-      all: "Ҳама",
-      "full-time": "Ҳозирагӣ",
-      "part-time": "ғоибона",
-      online: "Онлайн",
-    },
-  };
-  return map[lang][v] ?? v;
-}
-
-function langLabel(lang: "ru" | "tg", v: LangF) {
-  const map: Record<"ru" | "tg", Record<string, string>> = {
-    ru: { all: "Все", ru: "Русский", tj: "Таджикский", en: "Английский", mixed: "Смешанный" },
-    tg: { all: "Ҳама", ru: "Русӣ", tj: "Тоҷикӣ", en: "Англисӣ", mixed: "Омехта" },
-  };
-  return map[lang][v] ?? v;
-}
-
-function priceLabel(lang: "ru" | "tg", v: Price) {
-  if (v === "all") return t(lang, "all");
-  if (v === "free") return t(lang, "price_free");
-  return t(lang, "price_paid");
-}
-
-function distLabel(lang: "ru" | "tg", v: Dist) {
-  const map: Record<"ru" | "tg", Record<string, string>> = {
-    ru: { center: "Центр", north: "Север", south: "Юг", remote: "Онлайн" },
-    tg: { center: "Марказ", north: "Шимол", south: "Ҷануб", remote: "Онлайн" },
-  };
-  return map[lang][v] ?? v;
-}
-
-function placeChipLabel(lang: "ru" | "tg", u: University) {
-  if (u.location === "remote") return locLabel(lang, "remote");
-  const city = locLabel(lang, u.location as Loc);
-  const zone = distLabel(lang, u.district as Dist);
-  return `${city} · ${zone}`;
-}
-
-function facultyLabel(lang: "ru" | "tg", faculty: string) {
-  if (lang === "tg" && faculty.includes(" / ")) {
-    const parts = faculty.split(" / ").map((p) => p.trim());
-    return parts[parts.length - 1] || faculty;
-  }
-  return faculty;
-}
 
 export function Universities() {
   const navigate = useNavigate();
   const lang = useAppStore((s) => s.lang);
 
-  const [loc, setLoc] = useState<Loc>("all");
-  const [study, setStudy] = useState<Study>("all");
-  const [langF, setLangF] = useState<LangF>("all");
-  const [price, setPrice] = useState<Price>("all");
+  const [rows, setRows] = useState<AcademicSpecialty[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [city, setCity] = useState("all");
+  const [study, setStudy] = useState("all");
+  const [langF, setLangF] = useState("all");
+  const [tuition, setTuition] = useState("all");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchAcademicSpecialties();
+        if (!cancelled) setRows(data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Failed to load data");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const cities = useMemo(() => ["all", ...Array.from(new Set(rows.map((r) => (r.city ?? "").trim()).values())).filter(Boolean)], [rows]);
+  const studyModes = useMemo(() => ["all", ...Array.from(new Set(rows.map((r) => (r.study_mode ?? "").trim()).values())).filter(Boolean)], [rows]);
+  const languages = useMemo(() => ["all", ...Array.from(new Set(rows.map((r) => (r.language ?? "").trim()).values())).filter(Boolean)], [rows]);
+  const tuitions = useMemo(() => ["all", ...Array.from(new Set(rows.map((r) => (r.tuition ?? "").trim()).values())).filter(Boolean)], [rows]);
 
   const filtered = useMemo(() => {
-    const rows = universities.filter((u) => {
-      if (loc !== "all" && u.location !== loc) return false;
-      if (study !== "all" && u.studyType !== study) return false;
-      if (langF !== "all" && u.language !== langF) return false;
-      if (price !== "all" && u.price !== price) return false;
+    const data = rows.filter((r) => {
+      if (city !== "all" && (r.city ?? "").trim() !== city) return false;
+      if (study !== "all" && (r.study_mode ?? "").trim() !== study) return false;
+      if (langF !== "all" && (r.language ?? "").trim() !== langF) return false;
+      if (tuition !== "all" && (r.tuition ?? "").trim() !== tuition) return false;
       return true;
     });
-    return [...rows].sort((a, b) => b.requirementScore - a.requirementScore);
-  }, [loc, study, langF, price]);
+    return [...data].sort((a, b) => a.university_name.localeCompare(b.university_name));
+  }, [rows, city, study, langF, tuition]);
 
   const chip = <T extends string>(value: T, current: T, set: (v: T) => void, label: string) => {
     const active = value === current;
@@ -154,56 +103,69 @@ export function Universities() {
           <div className="lg:col-span-2">
             <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_place")}</div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["all", "dushanbe", "moscow", "remote", "bokhtar", "khujand"] as const).map((v) => chip(v, loc, setLoc, locLabel(lang, v)))}
+              {cities.map((v) => chip(v, city, setCity, v === "all" ? t(lang, "all") : v))}
             </div>
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_type")}</div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["all", "full-time", "part-time", "online"] as const).map((v) => chip(v, study, setStudy, studyLabel(lang, v)))}
+              {studyModes.map((v) => chip(v, study, setStudy, v === "all" ? t(lang, "all") : v))}
             </div>
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_lang")}</div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["all", "ru", "tj", "en", "mixed"] as const).map((v) => chip(v, langF, setLangF, langLabel(lang, v)))}
+              {languages.map((v) => chip(v, langF, setLangF, v === "all" ? t(lang, "all") : v))}
             </div>
           </div>
           <div className="lg:col-span-2">
             <div className="text-xs font-black uppercase tracking-wide text-ink-500 dark:text-slate-400">{t(lang, "filter_price")}</div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["all", "free", "paid"] as const).map((v) => chip(v, price, setPrice, priceLabel(lang, v)))}
+              {tuitions.map((v) => chip(v, tuition, setTuition, v === "all" ? t(lang, "all") : v))}
             </div>
           </div>
         </div>
       </section>
 
+      {loading ? (
+        <div className="mt-8 text-sm font-medium text-ink-500 dark:text-slate-400">Загрузка…</div>
+      ) : null}
+      {error ? (
+        <div className="mt-8 rounded-2xl bg-rose-100 px-4 py-3 text-sm font-bold text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-900/50">
+          {error}
+        </div>
+      ) : null}
+
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
-        {filtered.map((u, i) => (
+        {filtered.map((r, i) => (
           <motion.article
-            key={u.id}
+            key={r.id}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-soft ring-1 ring-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:ring-slate-600/80"
           >
             <div>
-              <div className="text-lg font-extrabold text-slate-950 dark:text-slate-50">{u.name}</div>
+              <div className="text-lg font-extrabold text-slate-950 dark:text-slate-50">{r.university_name}</div>
               <div className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                {t(lang, "uni_faculty")}: {facultyLabel(lang, u.faculty)}
+                {t(lang, "uni_faculty")}: {r.faculty_name}
+              </div>
+              <div className="mt-1 text-sm font-bold text-indigo-700 dark:text-indigo-300">
+                {r.code ? `${r.code} — ` : ""}
+                {r.name}
               </div>
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
                 <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
-                  {placeChipLabel(lang, u)}
+                  {r.city ?? "—"} · {r.district ?? "—"}
                 </span>
                 <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
-                  {studyLabel(lang, u.studyType)}
+                  {r.study_mode ?? "—"}
                 </span>
                 <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
-                  {langLabel(lang, u.language as LangF)}
+                  {r.language ?? "—"}
                 </span>
                 <span className="rounded-full bg-slate-200/90 px-2 py-1 text-slate-900 dark:bg-slate-700 dark:text-slate-100">
-                  {priceLabel(lang, u.price)}
+                  {r.tuition ?? "—"}
                 </span>
               </div>
             </div>

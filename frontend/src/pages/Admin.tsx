@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { AdminAcademicTab } from "../components/admin/AdminAcademicTab";
 import {
   createAdminCluster,
   createAdminGroup,
@@ -87,7 +88,7 @@ export function Admin() {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"structure" | "questions" | "stats">("structure");
+  const [activeTab, setActiveTab] = useState<"structure" | "questions" | "stats" | "academic">("structure");
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [clusterModal, setClusterModal] = useState<ClusterModalState | null>(null);
@@ -566,6 +567,7 @@ export function Admin() {
             [
               { id: "structure" as const, label: "Кластеры и группы" },
               { id: "questions" as const, label: "Вопросы" },
+              { id: "academic" as const, label: "Донишгоҳ/Факультет/Ихтисос" },
               { id: "stats" as const, label: "Статистика" },
             ] as const
           ).map((t) => (
@@ -1137,6 +1139,8 @@ export function Admin() {
       </motion.div>
         </>
       )}
+
+      {activeTab === "academic" && <AdminAcademicTab inputClass={inputClass} sectionCardClass={sectionCardClass} />}
 
       <AnimatePresence>
         {editor ? (

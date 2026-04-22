@@ -120,3 +120,43 @@ export type AdminStats = {
   total_questions: number;
   total_answers: number;
 };
+
+export type AcademicUniversity = {
+  id: number;
+  name: string;
+  city?: string | null;
+  district?: string | null;
+};
+
+export type AcademicFaculty = {
+  id: number;
+  university_id: number;
+  name: string;
+};
+
+export type AcademicSpecialty = {
+  id: number;
+  faculty_id: number;
+  code?: string | null;
+  name: string;
+  study_mode?: string | null;
+  language?: string | null;
+  tuition?: string | null;
+  source_sheet?: string | null;
+  faculty_name: string;
+  university_id: number;
+  university_name: string;
+  city?: string | null;
+  district?: string | null;
+};
+
+export type AcademicImportResult = {
+  sheets_read: number;
+  rows_seen: number;
+  rows_imported: number;
+  universities_created: number;
+  faculties_created: number;
+  specialties_created: number;
+  specialties_updated: number;
+  skipped_rows: number;
+};

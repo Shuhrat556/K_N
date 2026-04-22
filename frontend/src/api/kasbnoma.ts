@@ -1,5 +1,9 @@
 import { api } from "./client";
 import type {
+  AcademicFaculty,
+  AcademicImportResult,
+  AcademicSpecialty,
+  AcademicUniversity,
   AdminCluster,
   AdminGroup,
   AdminQuestion,
@@ -142,4 +146,113 @@ export async function updateAdminQuestion(id: number, payload: AdminQuestionUpda
 
 export async function deleteAdminQuestion(id: number): Promise<void> {
   await api.delete(`/admin/questions/${id}`);
+}
+
+export async function fetchAcademicUniversities(): Promise<AcademicUniversity[]> {
+  const { data } = await api.get<AcademicUniversity[]>("/admin/academic/universities");
+  return data;
+}
+
+export async function createAcademicUniversity(payload: {
+  name: string;
+  city?: string | null;
+  district?: string | null;
+}): Promise<AcademicUniversity> {
+  const { data } = await api.post<AcademicUniversity>("/admin/academic/universities", payload);
+  return data;
+}
+
+export async function updateAcademicUniversity(
+  id: number,
+  payload: { name?: string; city?: string | null; district?: string | null },
+): Promise<AcademicUniversity> {
+  const { data } = await api.patch<AcademicUniversity>(`/admin/academic/universities/${id}`, payload);
+  return data;
+}
+
+export async function deleteAcademicUniversity(id: number): Promise<void> {
+  await api.delete(`/admin/academic/universities/${id}`);
+}
+
+export async function fetchAcademicFaculties(universityId?: number): Promise<AcademicFaculty[]> {
+  const { data } = await api.get<AcademicFaculty[]>("/admin/academic/faculties", {
+    params: universityId ? { university_id: universityId } : undefined,
+  });
+  return data;
+}
+
+export async function createAcademicFaculty(payload: { university_id: number; name: string }): Promise<AcademicFaculty> {
+  const { data } = await api.post<AcademicFaculty>("/admin/academic/faculties", payload);
+  return data;
+}
+
+export async function updateAcademicFaculty(
+  id: number,
+  payload: { university_id?: number; name?: string },
+): Promise<AcademicFaculty> {
+  const { data } = await api.patch<AcademicFaculty>(`/admin/academic/faculties/${id}`, payload);
+  return data;
+}
+
+export async function deleteAcademicFaculty(id: number): Promise<void> {
+  await api.delete(`/admin/academic/faculties/${id}`);
+}
+
+export async function fetchAcademicSpecialties(params?: {
+  university_id?: number;
+  faculty_id?: number;
+  q?: string;
+}): Promise<AcademicSpecialty[]> {
+  const { data } = await api.get<AcademicSpecialty[]>("/academic/specialties", { params });
+  return data;
+}
+
+export async function fetchAdminAcademicSpecialties(params?: {
+  university_id?: number;
+  faculty_id?: number;
+  q?: string;
+}): Promise<AcademicSpecialty[]> {
+  const { data } = await api.get<AcademicSpecialty[]>("/admin/academic/specialties", { params });
+  return data;
+}
+
+export async function createAcademicSpecialty(payload: {
+  faculty_id: number;
+  code?: string | null;
+  name: string;
+  study_mode?: string | null;
+  language?: string | null;
+  tuition?: string | null;
+  source_sheet?: string | null;
+}): Promise<void> {
+  await api.post("/admin/academic/specialties", payload);
+}
+
+export async function updateAcademicSpecialty(
+  id: number,
+  payload: {
+    faculty_id?: number;
+    code?: string | null;
+    name?: string;
+    study_mode?: string | null;
+    language?: string | null;
+    tuition?: string | null;
+    source_sheet?: string | null;
+  },
+): Promise<void> {
+  await api.patch(`/admin/academic/specialties/${id}`, payload);
+}
+
+export async function deleteAcademicSpecialty(id: number): Promise<void> {
+  await api.delete(`/admin/academic/specialties/${id}`);
+}
+
+export async function importAcademicExcel(file: File, clearExisting: boolean): Promise<AcademicImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("clear_existing", String(clearExisting));
+  const { data } = await api.post<AcademicImportResult>("/admin/academic/import", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
 }
