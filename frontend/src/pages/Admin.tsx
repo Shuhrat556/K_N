@@ -4,6 +4,7 @@ import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { AdminAcademicTab } from "../components/admin/AdminAcademicTab";
+import { AdminSpecialtiesTab } from "../components/admin/AdminSpecialtiesTab";
 import {
   createAdminCluster,
   createAdminGroup,
@@ -88,7 +89,7 @@ export function Admin() {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"structure" | "questions" | "stats" | "academic">("structure");
+  const [activeTab, setActiveTab] = useState<"structure" | "questions" | "specialties" | "stats" | "academic">("structure");
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [clusterModal, setClusterModal] = useState<ClusterModalState | null>(null);
@@ -567,6 +568,7 @@ export function Admin() {
             [
               { id: "structure" as const, label: "Кластеры и группы" },
               { id: "questions" as const, label: "Вопросы" },
+              { id: "specialties" as const, label: "Ихтисосҳо (Excel)" },
               { id: "academic" as const, label: "Университеты / факультеты / специальности" },
               { id: "stats" as const, label: "Статистика" },
             ] as const
@@ -1141,6 +1143,8 @@ export function Admin() {
       )}
 
       {activeTab === "academic" && <AdminAcademicTab inputClass={inputClass} sectionCardClass={sectionCardClass} />}
+
+      {activeTab === "specialties" && <AdminSpecialtiesTab inputClass={inputClass} sectionCardClass={sectionCardClass} />}
 
       <AnimatePresence>
         {editor ? (

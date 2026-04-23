@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { specialtiesApi } from "./specialtiesClient";
 import type {
   AcademicFaculty,
   AcademicImportResult,
@@ -275,4 +276,111 @@ export async function importAcademicExcel(file: File, clearExisting: boolean): P
     headers: { "Content-Type": "multipart/form-data" },
   });
   return data;
+}
+
+// Specialty types for new Express backend
+export interface SpecialtyFilter {
+  location?: string;
+  language?: string;
+  studyType?: string;
+  university?: string;
+  search?: string;
+}
+
+export interface Specialty {
+  id: number;
+  code: string;
+  name: string;
+  university: string;
+  location: string | null;
+  studyForm: string | null;
+  studyType: string | null;
+  price: number;
+  language: string | null;
+  quota: number | null;
+  degree: string | null;
+  createdAt: string;
+}
+
+export interface SpecialtyFilters {
+  locations: string[];
+  languages: string[];
+  studyTypes: string[];
+  universities: string[];
+}
+
+export interface SpecialtyListResponse {
+  data: Specialty[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  stats: {
+    totalCount: number;
+    avgPrice: number;
+    maxPrice: number;
+    minPrice: number;
+  };
+}
+
+export interface SpecialtyUploadResponse {
+  ok: boolean;
+  filename: string;
+  parsed: number;
+  inserted: number;
+  skipped: number;
+}
+
+export async function fetchSpecialtyFilters(): Promise<SpecialtyFilters> {
+  const { data } = await specialtiesApi.get<SpecialtyFilters>("/specialties/filters");
+  return data;
+}
+
+export async function fetchSpecialties(params?: {
+  location?: string;
+  language?: string;
+  studyType?: string;
+  university?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: string;
+}): Promise<SpecialtyListResponse> {
+  const { data } = await specialtiesApi.get<SpecialtyListResponse>("/specialties", { params });
+  return data;
+}
+
+export async function previewSpecialtyExcel(file: File): Promise<{
+  ok: boolean;
+  filename: string;
+  headers: string[];
+  rows: unknown[][];
+  totalRows: number;
+}> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await specialtiesApi.post("/upload-excel/preview", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function uploadSpecialtyExcel(file: File): Promise<SpecialtyUploadResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await specialtiesApi.post<SpecialtyUploadResponse>("/upload-excel", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function deleteSpecialty(id: number): Promise<void> {
+  await specialtiesApi.delete(`/specialties/${id}`);
+}
+
+export async function clearAllSpecialties(): Promise<void> {
+  await specialtiesApi.delete("/specialties");
 }

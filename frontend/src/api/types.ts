@@ -161,3 +161,50 @@ export type AcademicImportResult = {
   specialties_updated: number;
   skipped_rows: number;
 };
+
+// New Express backend Specialty types
+export type Specialty = {
+  id: number;
+  code: string;
+  name: string;
+  university: string;
+  location: string | null;
+  studyForm: string | null;
+  studyType: string | null;
+  price: number;
+  language: string | null;
+  quota: number | null;
+  degree: string | null;
+  createdAt: string;
+};
+
+export type SpecialtyFilters = {
+  locations: string[];
+  languages: string[];
+  studyTypes: string[];
+  universities: string[];
+};
+
+export type SpecialtyListResponse = {
+  data: Specialty[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  stats: {
+    totalCount: number;
+    avgPrice: number;
+    maxPrice: number;
+    minPrice: number;
+  };
+};
+
+export type SpecialtyUploadResponse = {
+  ok: boolean;
+  filename: string;
+  parsed: number;
+  inserted: number;
+  skipped: number;
+};
