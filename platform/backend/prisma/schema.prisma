@@ -130,3 +130,24 @@ model Result {
   scoreJson Json
   createdAt DateTime @default(now())
 }
+
+model Specialization {
+  id             Int      @id @default(autoincrement())
+  externalId     Int?     @map("external_id")
+  direction      String?
+  codeName       String   @map("code_name")
+  institution    String
+  city           String?
+  educationForm  String?  @map("education_form")
+  educationType  String?  @map("education_type")
+  language       String?
+  quota          Int?
+  category       String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([codeName, institution], name: "specialization_code_institution")
+  @@index([city])
+  @@index([institution])
+  @@index([category])
+  @@map("specializations")
+}

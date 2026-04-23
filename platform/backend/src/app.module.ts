@@ -7,6 +7,7 @@ import { FacultiesModule } from "./faculties/faculties.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { QuestionsModule } from "./questions/questions.module";
 import { TestFlowModule } from "./test-flow/test-flow.module";
+import { SpecializationModule } from "./specialization/specialization.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TestFlowModule } from "./test-flow/test-flow.module";
     FacultiesModule,
     TestFlowModule,
     AdminModule,
+    SpecializationModule,
   ],
   controllers: [AppController],
 })
