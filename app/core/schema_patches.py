@@ -10,3 +10,4 @@ def apply_postgres_patches(engine: Engine) -> None:
         conn.execute(text("ALTER TABLE questions ADD COLUMN IF NOT EXISTS text_tj TEXT"))
         conn.execute(text("ALTER TABLE questions ADD COLUMN IF NOT EXISTS option_labels JSONB"))
         conn.execute(text("ALTER TABLE questions ADD COLUMN IF NOT EXISTS option_labels_tj JSONB"))
+        conn.execute(text("ALTER TABLE specialties ADD COLUMN IF NOT EXISTS admission_quota VARCHAR(512)"))

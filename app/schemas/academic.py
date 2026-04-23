@@ -47,6 +47,7 @@ class SpecialtyIn(BaseModel):
     study_mode: Optional[str] = Field(default=None, max_length=128)
     language: Optional[str] = Field(default=None, max_length=128)
     tuition: Optional[str] = Field(default=None, max_length=128)
+    admission_quota: Optional[str] = Field(default=None, max_length=512)
     source_sheet: Optional[str] = Field(default=None, max_length=255)
 
 
@@ -57,6 +58,7 @@ class SpecialtyUpdate(BaseModel):
     study_mode: Optional[str] = Field(default=None, max_length=128)
     language: Optional[str] = Field(default=None, max_length=128)
     tuition: Optional[str] = Field(default=None, max_length=128)
+    admission_quota: Optional[str] = Field(default=None, max_length=512)
     source_sheet: Optional[str] = Field(default=None, max_length=255)
 
 
@@ -68,6 +70,7 @@ class SpecialtyOut(BaseModel):
     study_mode: Optional[str] = None
     language: Optional[str] = None
     tuition: Optional[str] = None
+    admission_quota: Optional[str] = None
     source_sheet: Optional[str] = None
 
 

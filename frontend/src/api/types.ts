@@ -142,6 +142,7 @@ export type AcademicSpecialty = {
   study_mode?: string | null;
   language?: string | null;
   tuition?: string | null;
+  admission_quota?: string | null;
   source_sheet?: string | null;
   faculty_name: string;
   university_id: number;

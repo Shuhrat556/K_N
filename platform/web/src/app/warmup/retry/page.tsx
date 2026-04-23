@@ -8,10 +8,10 @@ export default function WarmupRetryPage() {
 
   return (
     <main className="mx-auto flex min-h-full max-w-xl flex-col px-4 py-10">
-      <h1 className="text-2xl font-extrabold">Take a break</h1>
+      <h1 className="text-2xl font-extrabold">Сделайте паузу</h1>
       <p className="mt-3 text-sm leading-relaxed text-slate-600">
-        Your warmup responses suggest you may be tired or distracted right now. For more reliable results, try again
-        later when you can focus for ~25 minutes.
+        По разминке видно, что вы устали или отвлекаетесь. Для более точного результата вернитесь позже, когда сможете
+        сосредоточиться примерно на 25 минут.
       </p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <Link
@@ -19,7 +19,7 @@ export default function WarmupRetryPage() {
           onClick={() => reset()}
           className="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white"
         >
-          Back to intro
+          На главную
         </Link>
       </div>
     </main>

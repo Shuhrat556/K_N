@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type WarmupQuestion } from "@/lib/api";
 import { useSessionStore } from "@/store/useSessionStore";
 
-const LABELS = ["First option", "Second option", "Third option"];
+const LABELS = ["Первый вариант", "Второй вариант", "Третий вариант"];
 
 export default function WarmupPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function WarmupPage() {
         const qs = await api.warmupQuestions(sessionId);
         setQuestions(qs);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load warmup");
+        setError(e instanceof Error ? e.message : "Не удалось загрузить разминку");
       }
     })();
   }, [sessionId, router]);
@@ -60,7 +60,7 @@ export default function WarmupPage() {
       }
       router.replace("/test");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Submit failed");
+      setError(e instanceof Error ? e.message : "Не удалось отправить ответы");
     } finally {
       setBusy(false);
     }
@@ -73,7 +73,7 @@ export default function WarmupPage() {
       <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-200">
         <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Warmup</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Разминка</p>
       {error ? (
         <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
@@ -106,7 +106,7 @@ export default function WarmupPage() {
             </div>
           </motion.div>
         ) : (
-          <div className="mt-10 text-sm font-medium text-slate-600">Loading…</div>
+          <div className="mt-10 text-sm font-medium text-slate-600">Загрузка…</div>
         )}
       </AnimatePresence>
     </main>

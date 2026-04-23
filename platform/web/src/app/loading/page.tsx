@@ -23,7 +23,7 @@ export default function LoadingPage() {
     <main className="grid min-h-full place-items-center px-4">
       <div className="text-center">
         <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-        <p className="mt-4 text-sm font-semibold text-slate-700">Calculating your profile…</p>
+        <p className="mt-4 text-sm font-semibold text-slate-700">Подсчёт профиля…</p>
       </div>
     </main>
   );

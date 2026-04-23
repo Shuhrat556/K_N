@@ -57,6 +57,7 @@ class Specialty(Base):
     study_mode: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     language: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     tuition: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    admission_quota: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     source_sheet: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

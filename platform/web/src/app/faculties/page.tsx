@@ -43,7 +43,7 @@ export default function FacultiesPage() {
         const data = await api.faculties(params);
         setRows(data);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load faculties");
+        setError(e instanceof Error ? e.message : "Не удалось загрузить факультеты");
       }
     })();
   }, [params]);
@@ -51,25 +51,25 @@ export default function FacultiesPage() {
   return (
     <main className="mx-auto flex min-h-full max-w-5xl flex-col gap-6 px-4 py-10">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Faculties</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">Факультеты</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Filters apply to the public catalog. If you finished a test in this browser, we’ll bias results toward your top
-          cluster automatically.
+          Фильтры действуют на общий каталог. Если вы завершили тест в этом браузере, результаты учитывают ваш ведущий
+          кластер автоматически.
         </p>
       </div>
 
       <section className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-3">
         <label className="text-xs font-semibold text-slate-600">
-          City
+          Город
           <input
             value={city}
             onChange={(e) => setCity(e.target.value)}
             className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-            placeholder="Dushanbe"
+            placeholder="Душанбе"
           />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Language
+          Язык
           <input
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
@@ -78,31 +78,31 @@ export default function FacultiesPage() {
           />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Type
+          Тип
           <select
             value={type}
             onChange={(e) => setType(e.target.value as "" | "FREE" | "PAID")}
             className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
           >
-            <option value="">Any</option>
-            <option value="FREE">Free</option>
-            <option value="PAID">Paid</option>
+            <option value="">Любой</option>
+            <option value="FREE">Бесплатно</option>
+            <option value="PAID">Платно</option>
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Mode
+          Формат
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as "" | "ONLINE" | "OFFLINE")}
             className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
           >
-            <option value="">Any</option>
-            <option value="ONLINE">Online</option>
-            <option value="OFFLINE">Offline</option>
+            <option value="">Любой</option>
+            <option value="ONLINE">Онлайн</option>
+            <option value="OFFLINE">Очно</option>
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Min score
+          Мин. балл
           <input
             value={minScore}
             onChange={(e) => setMinScore(e.target.value)}
@@ -111,7 +111,7 @@ export default function FacultiesPage() {
           />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Max score
+          Макс. балл
           <input
             value={maxScore}
             onChange={(e) => setMaxScore(e.target.value)}
@@ -120,7 +120,7 @@ export default function FacultiesPage() {
           />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Smart margin (uses your last test score if available)
+          Допуск по баллу (если есть результат последнего теста)
           <input
             value={margin}
             onChange={(e) => setMargin(e.target.value)}
@@ -147,14 +147,14 @@ export default function FacultiesPage() {
               <span className="rounded-full bg-slate-100 px-2 py-1">{f.language}</span>
               <span className="rounded-full bg-slate-100 px-2 py-1">{f.type}</span>
               <span className="rounded-full bg-slate-100 px-2 py-1">{f.mode}</span>
-              <span className="rounded-full bg-indigo-50 px-2 py-1 text-indigo-800">Score ≥ {f.scoreRequirement}</span>
+              <span className="rounded-full bg-indigo-50 px-2 py-1 text-indigo-800">Балл ≥ {f.scoreRequirement}</span>
             </div>
           </article>
         ))}
       </div>
 
       {!rows.length && !error ? (
-        <div className="text-sm font-medium text-slate-600">No faculties match these filters yet.</div>
+        <div className="text-sm font-medium text-slate-600">Нет факультетов по этим фильтрам.</div>
       ) : null}
     </main>
   );

@@ -201,6 +201,15 @@ export async function deleteAcademicFaculty(id: number): Promise<void> {
 export async function fetchAcademicSpecialties(params?: {
   university_id?: number;
   faculty_id?: number;
+  specialty_id?: number;
+  samt?: string;
+  university?: string;
+  makon?: string;
+  code_name?: string;
+  study_mode?: string;
+  tuition?: string;
+  language?: string;
+  admission_quota?: string;
   q?: string;
 }): Promise<AcademicSpecialty[]> {
   const { data } = await api.get<AcademicSpecialty[]>("/academic/specialties", { params });
@@ -210,6 +219,15 @@ export async function fetchAcademicSpecialties(params?: {
 export async function fetchAdminAcademicSpecialties(params?: {
   university_id?: number;
   faculty_id?: number;
+  specialty_id?: number;
+  samt?: string;
+  university?: string;
+  makon?: string;
+  code_name?: string;
+  study_mode?: string;
+  tuition?: string;
+  language?: string;
+  admission_quota?: string;
   q?: string;
 }): Promise<AcademicSpecialty[]> {
   const { data } = await api.get<AcademicSpecialty[]>("/admin/academic/specialties", { params });
@@ -223,6 +241,7 @@ export async function createAcademicSpecialty(payload: {
   study_mode?: string | null;
   language?: string | null;
   tuition?: string | null;
+  admission_quota?: string | null;
   source_sheet?: string | null;
 }): Promise<void> {
   await api.post("/admin/academic/specialties", payload);
@@ -237,6 +256,7 @@ export async function updateAcademicSpecialty(
     study_mode?: string | null;
     language?: string | null;
     tuition?: string | null;
+    admission_quota?: string | null;
     source_sheet?: string | null;
   },
 ): Promise<void> {

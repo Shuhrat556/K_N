@@ -23,7 +23,7 @@ export default function IntroPage() {
       setSession(s.sessionId, s.userId);
       router.push("/warmup");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Failed to start");
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Не удалось начать");
     } finally {
       setBusy(false);
     }
@@ -32,11 +32,11 @@ export default function IntroPage() {
   return (
     <main className="flex min-h-full flex-col px-4 py-12 sm:py-16">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mx-auto w-full max-w-xl space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Career guidance</p>
-        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Find your strongest career cluster</h1>
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Профориентация</p>
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Определите свой сильнейший профессиональный кластер</h1>
         <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
-          You’ll complete a short warmup (8 questions), then a main assessment (75 questions). If two clusters are
-          close, we’ll ask 10 follow‑up questions to improve confidence.
+          Сначала короткая разминка (8 вопросов), затем основной блок (75 вопросов). Если два кластера близки по баллам,
+          зададим до 10 уточняющих вопросов для надёжности результата.
         </p>
         {error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
@@ -50,13 +50,13 @@ export default function IntroPage() {
             disabled={busy}
             className="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-60"
           >
-            {busy ? "Starting…" : "Start assessment"}
+            {busy ? "Запуск…" : "Начать тест"}
           </button>
           <Link
             href="/faculties"
             className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-extrabold text-slate-900 shadow-sm hover:bg-slate-50"
           >
-            Browse faculties
+            Факультеты каталога
           </Link>
         </div>
       </motion.div>

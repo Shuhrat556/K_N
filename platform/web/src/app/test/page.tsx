@@ -7,11 +7,11 @@ import { api, type MainQuestion } from "@/lib/api";
 import { useSessionStore } from "@/store/useSessionStore";
 
 const SCALE = [
-  { v: 0, label: "Strongly disagree" },
-  { v: 1, label: "Disagree" },
-  { v: 2, label: "Neutral" },
-  { v: 3, label: "Agree" },
-  { v: 4, label: "Strongly agree" },
+  { v: 0, label: "Полностью не согласен" },
+  { v: 1, label: "Не согласен" },
+  { v: 2, label: "Нейтрально" },
+  { v: 3, label: "Согласен" },
+  { v: 4, label: "Полностью согласен" },
 ] as const;
 
 export default function MainTestPage() {
@@ -36,7 +36,7 @@ export default function MainTestPage() {
         setMode("main");
         setIdx(0);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load questions");
+        setError(e instanceof Error ? e.message : "Не удалось загрузить вопросы");
       }
     })();
   }, [sessionId, router]);
@@ -77,7 +77,7 @@ export default function MainTestPage() {
       await api.adaptiveComplete(sessionId);
       router.push("/loading?next=/result");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save answer");
+      setError(e instanceof Error ? e.message : "Не удалось сохранить ответ");
     } finally {
       setBusy(false);
     }
@@ -89,7 +89,7 @@ export default function MainTestPage() {
     <main className="mx-auto flex min-h-full max-w-xl flex-col px-4 py-8">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {mode === "main" ? "Main test" : "Follow‑up"}
+          {mode === "main" ? "Основной тест" : "Уточнение"}
         </p>
         <p className="text-xs font-bold text-slate-600">
           {total ? `${idx + 1} / ${total}` : ""}
@@ -134,7 +134,7 @@ export default function MainTestPage() {
             </div>
           </motion.div>
         ) : (
-          <div className="mt-10 text-sm font-medium text-slate-600">Loading…</div>
+          <div className="mt-10 text-sm font-medium text-slate-600">Загрузка…</div>
         )}
       </AnimatePresence>
     </main>

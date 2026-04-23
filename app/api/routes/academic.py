@@ -6,7 +6,7 @@ from typing import Optional
 import unicodedata
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -74,6 +74,19 @@ def _detect_header_row(rows: list[tuple[object, ...]]) -> tuple[int, dict[str, i
     # fallback: row 1 as header if structured headers were not found
     headers = {_norm(_to_text(c) or ""): idx for idx, c in enumerate(rows[1] if len(rows) > 1 else rows[0])}
     return (1 if len(rows) > 1 else 0), headers
+
+
+def _split_makon(raw: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    """Parse «макон (шаҳр/ноҳия)» like «Душанбе / Сино» or single city name."""
+    if not raw:
+        return None, None
+    t = str(raw).strip()
+    if not t:
+        return None, None
+    if "/" in t:
+        a, _, b = t.partition("/")
+        return (a.strip() or None), (b.strip() or None)
+    return t, None
 
 
 def _extract_code_and_name(raw: str) -> tuple[Optional[str], str]:
@@ -198,6 +211,7 @@ def _specialty_row_to_out(row: Specialty, faculty_name: str, university_id: int,
         study_mode=row.study_mode,
         language=row.language,
         tuition=row.tuition,
+        admission_quota=row.admission_quota,
         source_sheet=row.source_sheet,
         faculty_name=faculty_name,
         university_id=university_id,
@@ -212,6 +226,15 @@ def _specialty_row_to_out(row: Specialty, faculty_name: str, university_id: int,
 def list_specialties(
     university_id: Optional[int] = Query(default=None),
     faculty_id: Optional[int] = Query(default=None),
+    specialty_id: Optional[int] = Query(default=None),
+    samt: Optional[str] = Query(default=None, description="Факультет / самт — частичное совпадение"),
+    university: Optional[str] = Query(default=None, description="Название муассиса — частичное совпадение"),
+    makon: Optional[str] = Query(default=None, description="Город или район / колонка макон"),
+    code_name: Optional[str] = Query(default=None, description="Рамз ё номи ихтисос"),
+    study_mode: Optional[str] = Query(default=None),
+    tuition: Optional[str] = Query(default=None, description="Намуди таҳсил / маблағ"),
+    language: Optional[str] = Query(default=None),
+    admission_quota: Optional[str] = Query(default=None, description="Нақшаи қабул"),
     q: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
 ):
@@ -220,10 +243,52 @@ def list_specialties(
         .join(Faculty, Faculty.id == Specialty.faculty_id)
         .join(University, University.id == Faculty.university_id)
     )
+    if specialty_id is not None:
+        stmt = stmt.where(Specialty.id == specialty_id)
     if university_id is not None:
         stmt = stmt.where(University.id == university_id)
     if faculty_id is not None:
         stmt = stmt.where(Faculty.id == faculty_id)
+    if samt and samt.strip():
+        term = f"%{samt.strip().lower()}%"
+        stmt = stmt.where(func.lower(Faculty.name).like(term))
+    if university and university.strip():
+        term = f"%{university.strip().lower()}%"
+        stmt = stmt.where(func.lower(University.name).like(term))
+    if makon and makon.strip():
+        term = f"%{makon.strip().lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(func.coalesce(University.city, "")).like(term),
+                func.lower(func.coalesce(University.district, "")).like(term),
+                func.lower(
+                    func.trim(
+                        func.concat_ws(
+                            " ",
+                            func.coalesce(University.city, ""),
+                            func.coalesce(University.district, ""),
+                        )
+                    )
+                ).like(term),
+            )
+        )
+    if code_name and code_name.strip():
+        term = f"%{code_name.strip().lower()}%"
+        stmt = stmt.where(
+            func.lower(Specialty.name).like(term) | func.lower(func.coalesce(Specialty.code, "")).like(term)
+        )
+    if study_mode and study_mode.strip():
+        term = f"%{study_mode.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.study_mode, "")).like(term))
+    if tuition and tuition.strip():
+        term = f"%{tuition.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.tuition, "")).like(term))
+    if language and language.strip():
+        term = f"%{language.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.language, "")).like(term))
+    if admission_quota and admission_quota.strip():
+        term = f"%{admission_quota.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.admission_quota, "")).like(term))
     if q:
         term = f"%{q.strip().lower()}%"
         stmt = stmt.where(
@@ -248,6 +313,7 @@ def create_specialty(body: SpecialtyIn, db: Session = Depends(get_db)):
         study_mode=_to_text(body.study_mode),
         language=_to_text(body.language),
         tuition=_to_text(body.tuition),
+        admission_quota=_to_text(body.admission_quota),
         source_sheet=_to_text(body.source_sheet),
     )
     db.add(row)
@@ -265,6 +331,7 @@ def create_specialty(body: SpecialtyIn, db: Session = Depends(get_db)):
         study_mode=row.study_mode,
         language=row.language,
         tuition=row.tuition,
+        admission_quota=row.admission_quota,
         source_sheet=row.source_sheet,
     )
 
@@ -289,6 +356,8 @@ def patch_specialty(specialty_id: int, body: SpecialtyUpdate, db: Session = Depe
         row.language = _to_text(data["language"])
     if "tuition" in data:
         row.tuition = _to_text(data["tuition"])
+    if "admission_quota" in data:
+        row.admission_quota = _to_text(data["admission_quota"])
     if "source_sheet" in data:
         row.source_sheet = _to_text(data["source_sheet"])
     try:
@@ -305,6 +374,7 @@ def patch_specialty(specialty_id: int, body: SpecialtyUpdate, db: Session = Depe
         study_mode=row.study_mode,
         language=row.language,
         tuition=row.tuition,
+        admission_quota=row.admission_quota,
         source_sheet=row.source_sheet,
     )
 
@@ -364,13 +434,15 @@ async def import_academic_excel(
         header_idx, headers = _detect_header_row(rows)
 
         c_fac = _match_col(headers, ("самт", "fakult", "faculty", "cluster"))
-        c_spec = _match_col(headers, ("ихтисос", "ixtisos", "special"))
+        c_spec = _match_col(headers, ("ихтисос", "ixtisos", "special", "номи ихтисос"))
         c_uni = _match_col(headers, ("муассис", "донишгох", "univers", "college"))
         c_city = _match_col(headers, ("шахр", "шаҳр", "город", "city"))
         c_dist = _match_col(headers, ("нохия", "ноҳия", "район", "district"))
-        c_mode = _match_col(headers, ("шакли", "таълим", "mode", "form"))
-        c_lang = _match_col(headers, ("забон", "language"))
-        c_tuition = _match_col(headers, ("пулаки", "пул", "оплат", "tuition", "cost"))
+        c_makon = _match_col(headers, ("мақон", "макон", "макони", "location"))
+        c_mode = _match_col(headers, ("шакли", "шакл", "mode", "form"))
+        c_lang = _match_col(headers, ("забони", "забон", "language"))
+        c_tuition = _match_col(headers, ("намуди", "намуд", "сомон", "маблағ", "пулаки", "пул", "оплат", "tuition", "cost"))
+        c_admission = _match_col(headers, ("нақша", "қабул", "plan", "quota"))
         c_code = _match_col(headers, ("рамз", "code"))
 
         for row in rows[header_idx + 1 :]:
@@ -388,9 +460,16 @@ async def import_academic_excel(
             code = code or parsed_code
             city = _to_text(row[c_city]) if c_city is not None and c_city < len(row) else None
             district = _to_text(row[c_dist]) if c_dist is not None and c_dist < len(row) else None
+            if c_makon is not None and c_makon < len(row):
+                mk = _to_text(row[c_makon])
+                if mk:
+                    mc, md = _split_makon(mk)
+                    city = city or mc
+                    district = district or md
             study_mode = _to_text(row[c_mode]) if c_mode is not None and c_mode < len(row) else None
             language = _to_text(row[c_lang]) if c_lang is not None and c_lang < len(row) else None
             tuition = _to_text(row[c_tuition]) if c_tuition is not None and c_tuition < len(row) else None
+            admission = _to_text(row[c_admission]) if c_admission is not None and c_admission < len(row) else None
             fac_name = fac_name or sheet.title
 
             u_key = (_norm(uni_name), _norm(city or ""), _norm(district or ""))
@@ -444,6 +523,7 @@ async def import_academic_excel(
                         study_mode=study_mode,
                         language=language,
                         tuition=tuition,
+                        admission_quota=admission,
                         source_sheet=sheet.title,
                     )
                     db.add(spec)
@@ -453,6 +533,7 @@ async def import_academic_excel(
                     spec.study_mode = study_mode or spec.study_mode
                     spec.language = language or spec.language
                     spec.tuition = tuition or spec.tuition
+                    spec.admission_quota = admission or spec.admission_quota
                     spec.source_sheet = sheet.title
                     stats["specialties_updated"] += 1
                 spec_cache[s_key] = spec
@@ -460,6 +541,7 @@ async def import_academic_excel(
                 spec.study_mode = study_mode or spec.study_mode
                 spec.language = language or spec.language
                 spec.tuition = tuition or spec.tuition
+                spec.admission_quota = admission or spec.admission_quota
                 spec.source_sheet = sheet.title
                 stats["specialties_updated"] += 1
 

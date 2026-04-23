@@ -44,6 +44,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   const [specMode, setSpecMode] = useState("");
   const [specLang, setSpecLang] = useState("");
   const [specTuition, setSpecTuition] = useState("");
+  const [specAdmission, setSpecAdmission] = useState("");
 
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [clearExisting, setClearExisting] = useState(false);
@@ -81,6 +82,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
       (s) =>
         s.name.toLowerCase().includes(q) ||
         (s.code ?? "").toLowerCase().includes(q) ||
+        (s.admission_quota ?? "").toLowerCase().includes(q) ||
         s.university_name.toLowerCase().includes(q) ||
         s.faculty_name.toLowerCase().includes(q),
     );
@@ -99,7 +101,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
       setUniName("");
       setUniCity("");
       setUniDistrict("");
-      setMessage("Донишгоҳ қўшилди");
+      setMessage("Университет добавлен");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось добавить университет");
@@ -113,7 +115,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
     try {
       await createAcademicFaculty({ university_id: facultyUniversityId, name: facultyName.trim() });
       setFacultyName("");
-      setMessage("Факультет қўшилди");
+      setMessage("Факультет добавлен");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось добавить факультет");
@@ -132,13 +134,15 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
         study_mode: specMode.trim() || null,
         language: specLang.trim() || null,
         tuition: specTuition.trim() || null,
+        admission_quota: specAdmission.trim() || null,
       });
       setSpecCode("");
       setSpecName("");
       setSpecMode("");
       setSpecLang("");
       setSpecTuition("");
-      setMessage("Ихтисос қўшилди");
+      setSpecAdmission("");
+      setMessage("Специальность добавлена");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось добавить специальность");
@@ -146,12 +150,12 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   };
 
   const onDeleteUniversity = async (id: number) => {
-    if (!window.confirm("Университетни ўчиришни тасдиқлайсизми?")) return;
+    if (!window.confirm("Удалить университет?")) return;
     setError(null);
     setMessage(null);
     try {
       await deleteAcademicUniversity(id);
-      setMessage("Университет ўчирилди");
+      setMessage("Университет удалён");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось удалить университет");
@@ -159,10 +163,10 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   };
 
   const onEditUniversity = async (u: AcademicUniversity) => {
-    const name = window.prompt("Донишгоҳ номи", u.name);
+    const name = window.prompt("Название университета", u.name);
     if (name == null) return;
-    const city = window.prompt("Шаҳр", u.city ?? "") ?? "";
-    const district = window.prompt("Ноҳия", u.district ?? "") ?? "";
+    const city = window.prompt("Город", u.city ?? "") ?? "";
+    const district = window.prompt("Район", u.district ?? "") ?? "";
     setError(null);
     setMessage(null);
     try {
@@ -171,7 +175,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
         city: city.trim() || null,
         district: district.trim() || null,
       });
-      setMessage("Университет янгиланди");
+      setMessage("Университет обновлён");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось изменить университет");
@@ -179,12 +183,12 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   };
 
   const onDeleteFaculty = async (id: number) => {
-    if (!window.confirm("Факультетни ўчиришни тасдиқлайсизми?")) return;
+    if (!window.confirm("Удалить факультет?")) return;
     setError(null);
     setMessage(null);
     try {
       await deleteAcademicFaculty(id);
-      setMessage("Факультет ўчирилди");
+      setMessage("Факультет удалён");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось удалить факультет");
@@ -192,13 +196,13 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   };
 
   const onEditFaculty = async (f: AcademicFaculty) => {
-    const name = window.prompt("Факультет номи", f.name);
+    const name = window.prompt("Название факультета", f.name);
     if (name == null) return;
     setError(null);
     setMessage(null);
     try {
       await updateAcademicFaculty(f.id, { name: name.trim() || f.name });
-      setMessage("Факультет янгиланди");
+      setMessage("Факультет обновлён");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось изменить факультет");
@@ -206,12 +210,12 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   };
 
   const onDeleteSpecialty = async (id: number) => {
-    if (!window.confirm("Ихтисосни ўчиришни тасдиқлайсизми?")) return;
+    if (!window.confirm("Удалить специальность?")) return;
     setError(null);
     setMessage(null);
     try {
       await deleteAcademicSpecialty(id);
-      setMessage("Ихтисос ўчирилди");
+      setMessage("Специальность удалена");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось удалить специальность");
@@ -220,11 +224,12 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
 
   const onEditSpecialty = async (s: AcademicSpecialty) => {
     const code = window.prompt("Код", s.code ?? "") ?? "";
-    const name = window.prompt("Ихтисос номи", s.name);
+    const name = window.prompt("Название специальности", s.name);
     if (name == null) return;
-    const study_mode = window.prompt("Шакли таълим", s.study_mode ?? "") ?? "";
-    const language = window.prompt("Забони таълим", s.language ?? "") ?? "";
-    const tuition = window.prompt("Пулакӣ/Бепул", s.tuition ?? "") ?? "";
+    const study_mode = window.prompt("Форма обучения", s.study_mode ?? "") ?? "";
+    const language = window.prompt("Язык обучения", s.language ?? "") ?? "";
+    const tuition = window.prompt("Оплата / бесплатно", s.tuition ?? "") ?? "";
+    const admission_quota = window.prompt("Нақшаи қабул / план набора", s.admission_quota ?? "") ?? "";
     setError(null);
     setMessage(null);
     try {
@@ -234,8 +239,9 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
         study_mode: study_mode.trim() || null,
         language: language.trim() || null,
         tuition: tuition.trim() || null,
+        admission_quota: admission_quota.trim() || null,
       });
-      setMessage("Ихтисос янгиланди");
+      setMessage("Специальность обновлена");
       await loadAll();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось изменить специальность");
@@ -245,7 +251,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
   const onImport = async (e: FormEvent) => {
     e.preventDefault();
     if (!excelFile) {
-      setError("Excel файл танланмаган");
+      setError("Выберите файл Excel");
       return;
     }
     setImporting(true);
@@ -254,12 +260,12 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
     try {
       const res = await importAcademicExcel(excelFile, clearExisting);
       setMessage(
-        `Импорт тайёр: ${res.rows_imported} қатор, янги ${res.universities_created} дон. + ${res.faculties_created} фак. + ${res.specialties_created} ихтисос`,
+        `Импорт завершён: строк ${res.rows_imported}, добавлено университетов ${res.universities_created}, факультетов ${res.faculties_created}, специальностей ${res.specialties_created}`,
       );
       setExcelFile(null);
       await loadAll();
     } catch (err) {
-      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Импортда хатолик");
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Ошибка импорта");
     } finally {
       setImporting(false);
     }
@@ -270,9 +276,9 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
       <div className={`mt-6 ${sectionCardClass}`}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Донишгоҳ / Факультет / Ихтисос</h2>
+            <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Университеты / факультеты / специальности</h2>
             <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-              Фақат реал маълумот. Excel орқали бир неча листдан импорт қилинади.
+              Только реальные данные. Импорт из Excel (несколько листов).
             </p>
           </div>
           <button
@@ -280,7 +286,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
             onClick={() => void loadAll()}
             className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
           >
-            {loading ? "Янгиланмоқда..." : "Янгилаш"}
+            {loading ? "Обновление…" : "Обновить"}
           </button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -298,7 +304,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
       </div>
 
       <form onSubmit={onImport} className={`mt-6 ${sectionCardClass}`}>
-        <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Excel импорт</h3>
+        <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Импорт Excel</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
           <input
             type="file"
@@ -308,7 +314,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
           />
           <label className="inline-flex items-center gap-2 rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-ink-800 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600">
             <input type="checkbox" checked={clearExisting} onChange={(e) => setClearExisting(e.target.checked)} />
-            Аввалги каталогни тозалаш
+            Очистить каталог перед импортом
           </label>
         </div>
         <button
@@ -316,29 +322,29 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
           disabled={importing}
           className="mt-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft disabled:opacity-60"
         >
-          {importing ? "Импорт..." : "Excel дан юклаш"}
+          {importing ? "Импорт…" : "Загрузить из Excel"}
         </button>
       </form>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <form onSubmit={onCreateUniversity} className={sectionCardClass}>
-          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Донишгоҳ қўшиш</h3>
+          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Добавить университет</h3>
           <div className="mt-3 space-y-2">
-            <input className={inputClass} placeholder="Номи" value={uniName} onChange={(e) => setUniName(e.target.value)} required />
-            <input className={inputClass} placeholder="Шаҳр" value={uniCity} onChange={(e) => setUniCity(e.target.value)} />
-            <input className={inputClass} placeholder="Ноҳия" value={uniDistrict} onChange={(e) => setUniDistrict(e.target.value)} />
+            <input className={inputClass} placeholder="Название" value={uniName} onChange={(e) => setUniName(e.target.value)} required />
+            <input className={inputClass} placeholder="Город" value={uniCity} onChange={(e) => setUniCity(e.target.value)} />
+            <input className={inputClass} placeholder="Район" value={uniDistrict} onChange={(e) => setUniDistrict(e.target.value)} />
           </div>
           <button type="submit" className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white dark:bg-indigo-600">
-            Қўшиш
+            Добавить
           </button>
         </form>
 
         <form onSubmit={onCreateFaculty} className={sectionCardClass}>
-          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Факультет қўшиш</h3>
+          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Добавить факультет</h3>
           <div className="mt-3 space-y-2">
             <select className={inputClass} value={facultyUniversityId || ""} onChange={(e) => setFacultyUniversityId(Number(e.target.value))} required>
               <option value="" disabled>
-                Университет танланг
+                Выберите университет
               </option>
               {universities.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -346,19 +352,19 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
                 </option>
               ))}
             </select>
-            <input className={inputClass} placeholder="Факультет номи" value={facultyName} onChange={(e) => setFacultyName(e.target.value)} required />
+            <input className={inputClass} placeholder="Название факультета" value={facultyName} onChange={(e) => setFacultyName(e.target.value)} required />
           </div>
           <button type="submit" className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white dark:bg-indigo-600">
-            Қўшиш
+            Добавить
           </button>
         </form>
 
         <form onSubmit={onCreateSpecialty} className={sectionCardClass}>
-          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Ихтисос қўшиш</h3>
+          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Добавить специальность</h3>
           <div className="mt-3 space-y-2">
             <select className={inputClass} value={specFacultyId || ""} onChange={(e) => setSpecFacultyId(Number(e.target.value))} required>
               <option value="" disabled>
-                Факультет танланг
+                Выберите факультет
               </option>
               {faculties.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -366,24 +372,25 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
                 </option>
               ))}
             </select>
-            <input className={inputClass} placeholder="Код (ихтиёрий)" value={specCode} onChange={(e) => setSpecCode(e.target.value)} />
-            <input className={inputClass} placeholder="Ихтисос номи" value={specName} onChange={(e) => setSpecName(e.target.value)} required />
-            <input className={inputClass} placeholder="Шакли таълим" value={specMode} onChange={(e) => setSpecMode(e.target.value)} />
-            <input className={inputClass} placeholder="Забони таълим" value={specLang} onChange={(e) => setSpecLang(e.target.value)} />
-            <input className={inputClass} placeholder="Пулакӣ/Бепул" value={specTuition} onChange={(e) => setSpecTuition(e.target.value)} />
+            <input className={inputClass} placeholder="Код (необязательно)" value={specCode} onChange={(e) => setSpecCode(e.target.value)} />
+            <input className={inputClass} placeholder="Название специальности" value={specName} onChange={(e) => setSpecName(e.target.value)} required />
+            <input className={inputClass} placeholder="Форма обучения" value={specMode} onChange={(e) => setSpecMode(e.target.value)} />
+            <input className={inputClass} placeholder="Язык обучения" value={specLang} onChange={(e) => setSpecLang(e.target.value)} />
+            <input className={inputClass} placeholder="Оплата / бесплатно" value={specTuition} onChange={(e) => setSpecTuition(e.target.value)} />
+            <input className={inputClass} placeholder="Нақшаи қабул" value={specAdmission} onChange={(e) => setSpecAdmission(e.target.value)} />
           </div>
           <button type="submit" className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white dark:bg-indigo-600">
-            Қўшиш
+            Добавить
           </button>
         </form>
       </div>
 
       <div className={`mt-6 ${sectionCardClass}`}>
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Мавжуд маълумотлар</h3>
+          <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Текущие данные</h3>
           <input
             className={inputClass + " max-w-xs"}
-            placeholder="Қидириш..."
+            placeholder="Поиск…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -391,20 +398,30 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
 
         <div className="mt-4 grid gap-6 lg:grid-cols-3">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Донишгоҳлар</div>
+            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Университеты</div>
             <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
               {universities.map((u) => (
                 <li key={u.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
                   <div>
                     <div className="font-semibold text-ink-900 dark:text-slate-100">{u.name}</div>
-                    <div className="text-xs text-ink-500 dark:text-slate-400">{u.city ?? "—"} · {u.district ?? "—"}</div>
+                    <div className="text-xs text-ink-500 dark:text-slate-400">
+                      {u.city ?? "—"} · {u.district ?? "—"}
+                    </div>
                   </div>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => void onEditUniversity(u)} className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600">
-                      Таҳрир
+                    <button
+                      type="button"
+                      onClick={() => void onEditUniversity(u)}
+                      className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600"
+                    >
+                      Изменить
                     </button>
-                    <button type="button" onClick={() => void onDeleteUniversity(u.id)} className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50">
-                      Ўчириш
+                    <button
+                      type="button"
+                      onClick={() => void onDeleteUniversity(u.id)}
+                      className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50"
+                    >
+                      Удалить
                     </button>
                   </div>
                 </li>
@@ -413,7 +430,7 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
           </div>
 
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Факультетлар</div>
+            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Факультеты</div>
             <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
               {faculties.map((f) => (
                 <li key={f.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
@@ -422,11 +439,19 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
                     <div className="text-xs text-ink-500 dark:text-slate-400">university_id: {f.university_id}</div>
                   </div>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => void onEditFaculty(f)} className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600">
-                      Таҳрир
+                    <button
+                      type="button"
+                      onClick={() => void onEditFaculty(f)}
+                      className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600"
+                    >
+                      Изменить
                     </button>
-                    <button type="button" onClick={() => void onDeleteFaculty(f.id)} className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50">
-                      Ўчириш
+                    <button
+                      type="button"
+                      onClick={() => void onDeleteFaculty(f.id)}
+                      className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50"
+                    >
+                      Удалить
                     </button>
                   </div>
                 </li>
@@ -435,20 +460,36 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
           </div>
 
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Ихтисослар</div>
+            <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Специальности</div>
             <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
               {filteredSpecialties.map((s) => (
                 <li key={s.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
                   <div>
-                    <div className="font-semibold text-ink-900 dark:text-slate-100">{s.code ? `${s.code} — ` : ""}{s.name}</div>
-                    <div className="text-xs text-ink-500 dark:text-slate-400">{s.university_name} · {s.faculty_name}</div>
+                    <div className="font-semibold text-ink-900 dark:text-slate-100">
+                      {s.code ? `${s.code} — ` : ""}
+                      {s.name}
+                    </div>
+                    <div className="text-xs text-ink-500 dark:text-slate-400">
+                      {s.university_name} · {s.faculty_name}
+                    </div>
+                    <div className="text-[11px] text-ink-500 dark:text-slate-400">
+                      Нақша: {s.admission_quota ?? "—"}
+                    </div>
                   </div>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => void onEditSpecialty(s)} className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600">
-                      Таҳрир
+                    <button
+                      type="button"
+                      onClick={() => void onEditSpecialty(s)}
+                      className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600"
+                    >
+                      Изменить
                     </button>
-                    <button type="button" onClick={() => void onDeleteSpecialty(s.id)} className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50">
-                      Ўчириш
+                    <button
+                      type="button"
+                      onClick={() => void onDeleteSpecialty(s.id)}
+                      className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50"
+                    >
+                      Удалить
                     </button>
                   </div>
                 </li>

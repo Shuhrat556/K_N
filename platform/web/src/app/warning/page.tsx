@@ -22,7 +22,7 @@ export default function WarningPage() {
       await api.warmupContinue(sessionId);
       router.replace("/test");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not continue");
+      setError(e instanceof Error ? e.message : "Не удалось продолжить");
     } finally {
       setBusy(false);
     }
@@ -30,10 +30,9 @@ export default function WarningPage() {
 
   return (
     <main className="mx-auto flex min-h-full max-w-xl flex-col px-4 py-10">
-      <h1 className="text-2xl font-extrabold">Quick heads‑up</h1>
+      <h1 className="text-2xl font-extrabold">Небольшое напоминание</h1>
       <p className="mt-3 text-sm leading-relaxed text-slate-600">
-        Your warmup score is in a middling range. You can still continue, but your answers will be more reliable if you
-        minimize distractions.
+        Результат разминки в среднем диапазоне. Можно продолжить, но ответы будут точнее, если убрать отвлекающие факторы.
       </p>
       {error ? (
         <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
@@ -46,7 +45,7 @@ export default function WarningPage() {
         onClick={() => void onContinue()}
         className="mt-6 inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-extrabold text-white disabled:opacity-60"
       >
-        {busy ? "Continuing…" : "Continue to main test"}
+        {busy ? "Переход…" : "К основному тесту"}
       </button>
     </main>
   );

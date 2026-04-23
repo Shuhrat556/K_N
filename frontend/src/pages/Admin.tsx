@@ -567,7 +567,7 @@ export function Admin() {
             [
               { id: "structure" as const, label: "Кластеры и группы" },
               { id: "questions" as const, label: "Вопросы" },
-              { id: "academic" as const, label: "Донишгоҳ/Факультет/Ихтисос" },
+              { id: "academic" as const, label: "Университеты / факультеты / специальности" },
               { id: "stats" as const, label: "Статистика" },
             ] as const
           ).map((t) => (

@@ -25,7 +25,7 @@ function formatNestMessage(body: unknown): string | undefined {
   const errors = b.errors;
   if (Array.isArray(errors)) {
     const lines = errors.map(String).slice(0, 6);
-    const extra = errors.length > 6 ? ` (+${errors.length - 6} more)` : "";
+    const extra = errors.length > 6 ? ` (+ещё ${errors.length - 6})` : "";
     return `${lines.join("; ")}${extra}`;
   }
 
@@ -49,7 +49,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // ignore
     }
-    const detail = formatNestMessage(body) ?? `Request failed (${res.status})`;
+    const detail = formatNestMessage(body) ?? `Ошибка запроса (${res.status})`;
     throw new ApiError(detail, res.status, body);
   }
 
