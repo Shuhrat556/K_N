@@ -4,6 +4,7 @@ import type {
   AcademicFaculty,
   AcademicImportResult,
   AcademicSpecialtyPage,
+  AcademicSpecialtyStats,
   AcademicSpecialty,
   AcademicUniversity,
   AdminCluster,
@@ -240,6 +241,36 @@ export async function fetchAcademicSpecialties(params?: {
   return data;
 }
 
+export async function fetchAcademicSpecialtiesPage(params?: {
+  university_id?: number;
+  faculty_id?: number;
+  specialty_id?: number;
+  group_code?: string;
+  samt?: string;
+  university?: string;
+  makon?: string;
+  code_name?: string;
+  study_mode?: string;
+  tuition?: string;
+  language?: string;
+  admission_quota?: string;
+  degree?: string;
+  free_only?: boolean;
+  price_min?: number;
+  price_max?: number;
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<AcademicSpecialtyPage> {
+  const { data } = await api.get<AcademicSpecialtyPage>("/academic/specialties/page", { params });
+  return data;
+}
+
+export async function fetchAcademicSpecialtyStats(): Promise<AcademicSpecialtyStats> {
+  const { data } = await api.get<AcademicSpecialtyStats>("/academic/specialties/stats");
+  return data;
+}
+
 export async function fetchAdminAcademicSpecialties(params?: {
   university_id?: number;
   faculty_id?: number;
@@ -285,6 +316,11 @@ export async function fetchAdminAcademicSpecialtiesPage(params?: {
   limit?: number;
 }): Promise<AcademicSpecialtyPage> {
   const { data } = await api.get<AcademicSpecialtyPage>("/admin/academic/specialties/page", { params });
+  return data;
+}
+
+export async function fetchAdminAcademicSpecialtyStats(): Promise<AcademicSpecialtyStats> {
+  const { data } = await api.get<AcademicSpecialtyStats>("/admin/academic/specialties/stats");
   return data;
 }
 

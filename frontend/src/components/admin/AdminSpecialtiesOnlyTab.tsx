@@ -1,7 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
-import { fetchAdminAcademicSpecialtiesPage, importAcademicExcel } from "../../api/kasbnoma";
-import type { AcademicSpecialty, AcademicSpecialtyPage } from "../../api/types";
+import {
+  fetchAdminAcademicSpecialtiesPage,
+  fetchAdminAcademicSpecialtyStats,
+  importAcademicExcel,
+} from "../../api/kasbnoma";
+import type { AcademicSpecialty, AcademicSpecialtyPage, AcademicSpecialtyStats } from "../../api/types";
 
 type Props = {
   inputClass: string;
@@ -30,6 +34,16 @@ const EMPTY_FILTERS: SpecialtyFilters = {
   degree: "",
 };
 
+const EMPTY_STATS: AcademicSpecialtyStats = {
+  total_specialties: 0,
+  universities_count: 0,
+  faculties_count: 0,
+  languages_count: 0,
+  study_modes_count: 0,
+  free_count: 0,
+  paid_count: 0,
+};
+
 function compactFilters(filters: SpecialtyFilters) {
   return Object.fromEntries(
     Object.entries(filters)
@@ -38,7 +52,7 @@ function compactFilters(filters: SpecialtyFilters) {
   ) as Partial<SpecialtyFilters>;
 }
 
-export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props) {
+export function AdminSpecialtiesOnlyTab({ inputClass }: Props) {
   const [filters, setFilters] = useState<SpecialtyFilters>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<SpecialtyFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -50,6 +64,7 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
     total: 0,
     total_pages: 0,
   });
+  const [stats, setStats] = useState<AcademicSpecialtyStats>(EMPTY_STATS);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -66,6 +81,45 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
     () => Object.values(appliedFilters).filter((value) => value.trim()).length,
     [appliedFilters],
   );
+
+  const statCards = [
+    {
+      label: "Всего ихтисосов",
+      value: stats.total_specialties,
+      hint: "записей в базе",
+      tone: "from-indigo-500 to-sky-500",
+    },
+    {
+      label: "Университеты",
+      value: stats.universities_count,
+      hint: "учебных заведений",
+      tone: "from-emerald-500 to-teal-500",
+    },
+    {
+      label: "Группы",
+      value: stats.faculties_count,
+      hint: "направлений / листов",
+      tone: "from-fuchsia-500 to-pink-500",
+    },
+    {
+      label: "Языки",
+      value: stats.languages_count,
+      hint: "вариантов обучения",
+      tone: "from-amber-500 to-orange-500",
+    },
+    {
+      label: "Формы обучения",
+      value: stats.study_modes_count,
+      hint: "доступных форм",
+      tone: "from-cyan-500 to-blue-500",
+    },
+    {
+      label: "Бесплатно / платно",
+      value: `${stats.free_count.toLocaleString()} / ${stats.paid_count.toLocaleString()}`,
+      hint: "по типу оплаты",
+      tone: "from-lime-500 to-emerald-500",
+    },
+  ];
 
   const loadPage = async () => {
     setLoading(true);
@@ -84,9 +138,21 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
     }
   };
 
+  const loadStats = async () => {
+    try {
+      setStats(await fetchAdminAcademicSpecialtyStats());
+    } catch (err) {
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось загрузить статистику");
+    }
+  };
+
   useEffect(() => {
     void loadPage();
   }, [appliedFilters, page, limit]);
+
+  useEffect(() => {
+    void loadStats();
+  }, []);
 
   const applyFilters = (e: FormEvent) => {
     e.preventDefault();
@@ -118,6 +184,7 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
         `Импорт завершён: обработано ${result.rows_seen}, загружено ${result.rows_imported}, пропущено ${result.skipped_rows}.`,
       );
       await loadPage();
+      await loadStats();
     } catch (err) {
       setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Ошибка импорта Excel");
     } finally {
@@ -131,7 +198,56 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
 
   return (
     <>
-      <form onSubmit={onImport} className={`mt-6 ${sectionCardClass}`}>
+      <div className="mt-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 via-sky-500 to-emerald-400 p-[1px] shadow-soft">
+        <div className="relative overflow-hidden rounded-[calc(2rem-1px)] bg-slate-950 px-6 py-7 text-white sm:px-8">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-52 w-52 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="inline-flex rounded-full bg-white/12 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-sky-100 ring-1 ring-white/15">
+                Каталог специальностей
+              </div>
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Ихтисосы и Excel импорт</h2>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-slate-200">
+                Вся база специальностей в одном месте: загрузка больших Excel-файлов, быстрые фильтры, статистика и постраничный просмотр.
+              </p>
+            </div>
+            <div className="rounded-3xl bg-white/10 px-5 py-4 ring-1 ring-white/15 backdrop-blur">
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-sky-100">В текущем фильтре</div>
+              <div className="mt-1 text-3xl font-black">{data.total.toLocaleString()}</div>
+              <div className="text-xs font-semibold text-slate-300">записей найдено</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="group overflow-hidden rounded-[1.7rem] bg-white shadow-card ring-1 ring-slate-200/80 transition hover:-translate-y-1 hover:shadow-soft dark:bg-slate-900 dark:ring-slate-700"
+          >
+            <div className={`h-2 bg-gradient-to-r ${card.tone}`} />
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    {card.label}
+                  </div>
+                  <div className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
+                    {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">{card.hint}</div>
+                </div>
+                <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${card.tone} opacity-90 shadow-card transition group-hover:scale-110`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={onImport} className="mt-6 overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-700">
+        <div className="bg-gradient-to-r from-violet-50 via-sky-50 to-emerald-50 px-6 py-5 dark:from-violet-950/30 dark:via-sky-950/25 dark:to-emerald-950/25">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Загрузка Excel</h2>
@@ -143,8 +259,9 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
             {importing ? "Идёт загрузка..." : "Готово к импорту"}
           </div>
         </div>
+        </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+        <div className="grid gap-3 p-6 lg:grid-cols-[1fr_auto_auto]">
           <input
             type="file"
             accept=".xlsx"
@@ -166,16 +283,20 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
         </div>
       </form>
 
-      <div className={`mt-6 ${sectionCardClass}`}>
+      <div className="mt-6 overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-700">
         <form onSubmit={applyFilters}>
+          <div className="bg-gradient-to-r from-slate-50 via-indigo-50 to-sky-50 px-6 py-6 dark:from-slate-900 dark:via-indigo-950/30 dark:to-sky-950/20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Ихтисосы</h2>
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">
+                Фильтры и список
+              </div>
+              <h2 className="mt-1 text-2xl font-black text-ink-900 dark:text-slate-50">Ихтисосы</h2>
               <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
                 Один общий список с фильтрами сверху и пагинацией снизу.
               </p>
             </div>
-            <div className="text-sm font-bold text-ink-600 dark:text-slate-300">
+            <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm font-black text-ink-700 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
               {data.total.toLocaleString()} записей {activeFilterCount ? `· фильтров: ${activeFilterCount}` : ""}
             </div>
           </div>
@@ -192,7 +313,7 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="submit" className="rounded-2xl bg-slate-900 px-5 py-2.5 text-xs font-extrabold text-white dark:bg-indigo-600">
+            <button type="submit" className="rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-card transition hover:-translate-y-0.5">
               Применить фильтр
             </button>
             <button
@@ -210,9 +331,11 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
               {loading ? "Обновление..." : "Обновить"}
             </button>
           </div>
+          </div>
         </form>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="px-6 pt-5">
+        <div className="flex flex-wrap gap-2">
           {message ? (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/50">
               {message}
@@ -224,10 +347,11 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
             </span>
           ) : null}
         </div>
+        </div>
 
-        <div className="mt-5 overflow-x-auto rounded-2xl ring-1 ring-slate-200/80 dark:ring-slate-700">
+        <div className="mx-6 mt-5 overflow-x-auto rounded-2xl ring-1 ring-slate-200/80 dark:ring-slate-700">
           <table className="w-full min-w-[1080px] text-left text-sm">
-            <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <thead className="bg-gradient-to-r from-slate-100 via-indigo-50 to-sky-50 text-[11px] font-black uppercase tracking-[0.14em] text-slate-600 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 dark:text-slate-300">
               <tr>
                 <th className="px-4 py-3">ID</th>
                 <th className="px-4 py-3">Код</th>
@@ -256,7 +380,7 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
           </table>
         </div>
 
-        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-5 flex flex-col gap-3 bg-slate-50 px-6 py-5 dark:bg-slate-950/30 lg:flex-row lg:items-center lg:justify-between">
           <div className="text-sm font-semibold text-ink-600 dark:text-slate-300">
             Показано {firstRow.toLocaleString()}-{lastRow.toLocaleString()} из {data.total.toLocaleString()}
           </div>
@@ -304,20 +428,39 @@ export function AdminSpecialtiesOnlyTab({ inputClass, sectionCardClass }: Props)
 function SpecialtyRow({ row }: { row: AcademicSpecialty }) {
   const place = [row.region, row.city, row.district].filter(Boolean).join(" / ") || "—";
   return (
-    <tr className="border-t border-slate-100 text-slate-800 dark:border-slate-800 dark:text-slate-200">
+    <tr className="border-t border-slate-100 text-slate-800 transition hover:bg-indigo-50/60 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800/70">
       <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">{row.id}</td>
-      <td className="px-4 py-3 font-mono text-xs">{row.code ?? "—"}</td>
-      <td className="px-4 py-3 font-bold">{row.name}</td>
+      <td className="px-4 py-3">
+        <span className="inline-flex rounded-xl bg-slate-100 px-2.5 py-1 font-mono text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          {row.code ?? "—"}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        <div className="font-extrabold text-slate-950 dark:text-white">{row.name}</div>
+        <div className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{row.degree ?? "Степень не указана"}</div>
+      </td>
       <td className="px-4 py-3">{row.university_name}</td>
       <td className="px-4 py-3">
         {row.faculty_code ? `${row.faculty_code} · ` : ""}
         {row.faculty_name}
       </td>
       <td className="px-4 py-3">{place}</td>
-      <td className="px-4 py-3">{row.study_mode ?? "—"}</td>
-      <td className="px-4 py-3">{row.language ?? "—"}</td>
-      <td className="px-4 py-3">{row.admission_quota ?? "—"}</td>
-      <td className="px-4 py-3">{row.tuition ?? row.price ?? "—"}</td>
+      <td className="px-4 py-3">
+        <span className="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-black text-sky-700 dark:bg-sky-950/60 dark:text-sky-200">
+          {row.study_mode ?? "—"}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        <span className="inline-flex rounded-full bg-violet-100 px-2.5 py-1 text-xs font-black text-violet-700 dark:bg-violet-950/60 dark:text-violet-200">
+          {row.language ?? "—"}
+        </span>
+      </td>
+      <td className="px-4 py-3 font-bold">{row.admission_quota ?? "—"}</td>
+      <td className="px-4 py-3">
+        <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200">
+          {row.tuition ?? row.price ?? "—"}
+        </span>
+      </td>
     </tr>
   );
 }

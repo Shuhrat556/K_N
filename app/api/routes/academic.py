@@ -4,7 +4,7 @@ from io import BytesIO
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from sqlalchemy import func, or_, select
+from sqlalchemy import distinct, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.schemas.academic import (
     SpecialtyListOut,
     SpecialtyOut,
     SpecialtyPageOut,
+    SpecialtyStatsOut,
     SpecialtyUpdate,
     UniversityIn,
     UniversityOut,
@@ -372,6 +373,7 @@ def list_specialties(
 
 
 @admin_router.get("/specialties/page", response_model=SpecialtyPageOut)
+@public_router.get("/specialties/page", response_model=SpecialtyPageOut)
 def list_specialties_page(
     university_id: Optional[int] = Query(default=None),
     faculty_id: Optional[int] = Query(default=None),
@@ -496,6 +498,58 @@ def list_specialties_page(
         limit=limit,
         total=total,
         total_pages=total_pages,
+    )
+
+
+@admin_router.get("/specialties/stats", response_model=SpecialtyStatsOut)
+@public_router.get("/specialties/stats", response_model=SpecialtyStatsOut)
+def specialties_stats(db: Session = Depends(get_db)):
+    total = db.scalar(select(func.count(Specialty.id))) or 0
+    universities_count = (
+        db.scalar(
+            select(func.count(distinct(University.id)))
+            .select_from(Specialty)
+            .join(Faculty, Faculty.id == Specialty.faculty_id)
+            .join(University, University.id == Faculty.university_id)
+        )
+        or 0
+    )
+    faculties_count = (
+        db.scalar(
+            select(func.count(distinct(Faculty.id)))
+            .select_from(Specialty)
+            .join(Faculty, Faculty.id == Specialty.faculty_id)
+        )
+        or 0
+    )
+    languages_count = (
+        db.scalar(
+            select(func.count(distinct(Specialty.language))).where(
+                Specialty.language.is_not(None),
+                Specialty.language != "",
+            )
+        )
+        or 0
+    )
+    study_modes_count = (
+        db.scalar(
+            select(func.count(distinct(Specialty.study_mode))).where(
+                Specialty.study_mode.is_not(None),
+                Specialty.study_mode != "",
+            )
+        )
+        or 0
+    )
+    free_count = db.scalar(select(func.count(Specialty.id)).where(Specialty.is_free.is_(True))) or 0
+    paid_count = db.scalar(select(func.count(Specialty.id)).where(Specialty.is_free.is_(False))) or 0
+    return SpecialtyStatsOut(
+        total_specialties=total,
+        universities_count=universities_count,
+        faculties_count=faculties_count,
+        languages_count=languages_count,
+        study_modes_count=study_modes_count,
+        free_count=free_count,
+        paid_count=paid_count,
     )
 
 

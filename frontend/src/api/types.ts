@@ -183,6 +183,16 @@ export type AcademicSpecialtyPage = {
   total_pages: number;
 };
 
+export type AcademicSpecialtyStats = {
+  total_specialties: number;
+  universities_count: number;
+  faculties_count: number;
+  languages_count: number;
+  study_modes_count: number;
+  free_count: number;
+  paid_count: number;
+};
+
 // New Express backend Specialty types
 export type Specialty = {
   id: number;

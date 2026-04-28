@@ -121,6 +121,16 @@ class SpecialtyPageOut(BaseModel):
     total_pages: int
 
 
+class SpecialtyStatsOut(BaseModel):
+    total_specialties: int
+    universities_count: int
+    faculties_count: int
+    languages_count: int
+    study_modes_count: int
+    free_count: int
+    paid_count: int
+
+
 class AcademicImportOut(BaseModel):
     sheets_read: int
     rows_seen: int
