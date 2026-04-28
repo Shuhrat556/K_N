@@ -20,6 +20,8 @@ import type {
   QuestionPhase,
 } from "./types";
 
+const LONG_IMPORT_TIMEOUT_MS = 10 * 60_000;
+
 export async function startTest(existingUserId?: string | null): Promise<StartTestResponse> {
   const { data } = await api.post<StartTestResponse>("/start-test", { user_id: existingUserId ?? null });
   return data;
@@ -307,6 +309,7 @@ export async function importAcademicExcel(file: File, clearExisting: boolean): P
   form.append("clear_existing", String(clearExisting));
   const { data } = await api.post<AcademicImportResult>("/admin/academic/import", form, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: LONG_IMPORT_TIMEOUT_MS,
   });
   return data;
 }
@@ -397,6 +400,7 @@ export async function previewSpecialtyExcel(file: File): Promise<{
   form.append("file", file);
   const { data } = await specialtiesApi.post("/upload-excel/preview", form, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: LONG_IMPORT_TIMEOUT_MS,
   });
   return data;
 }
@@ -406,6 +410,7 @@ export async function uploadSpecialtyExcel(file: File): Promise<SpecialtyUploadR
   form.append("file", file);
   const { data } = await specialtiesApi.post<SpecialtyUploadResponse>("/upload-excel", form, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: LONG_IMPORT_TIMEOUT_MS,
   });
   return data;
 }
