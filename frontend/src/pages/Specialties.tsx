@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { fetchAcademicSpecialtiesPage, fetchAcademicSpecialtyStats } from "../api/kasbnoma";
 import type { AcademicSpecialty, AcademicSpecialtyPage, AcademicSpecialtyStats } from "../api/types";
 import { BrandLogo } from "../components/BrandLogo";
@@ -82,6 +82,9 @@ function copy(lang: "ru" | "tg") {
       next: "Ба пеш",
       detailsHint: "Барои дидани тафсилот карточкаро интихоб кунед.",
       cta: "Гузаштан ба тест",
+      filters: "Филтрҳо",
+      hideFilters: "Пӯшидан",
+      retry: "Такрор",
     };
   }
   return {
@@ -115,17 +118,45 @@ function copy(lang: "ru" | "tg") {
     next: "Вперёд",
     detailsHint: "Выберите карточку, чтобы увидеть подробности.",
     cta: "Пройти тест",
+    filters: "Фильтры",
+    hideFilters: "Скрыть",
+    retry: "Повторить",
   };
+}
+
+function filtersFromParams(searchParams: URLSearchParams): FilterState {
+  return {
+    q: searchParams.get("q") ?? "",
+    university: searchParams.get("university") ?? "",
+    makon: searchParams.get("makon") ?? "",
+    group_code: searchParams.get("group_code") ?? "",
+    study_mode: searchParams.get("study_mode") ?? "",
+    tuition: searchParams.get("tuition") ?? "",
+    language: searchParams.get("language") ?? "",
+    degree: searchParams.get("degree") ?? "",
+  };
+}
+
+function pageFromParams(searchParams: URLSearchParams): number {
+  const value = Number(searchParams.get("page") ?? 1);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function limitFromParams(searchParams: URLSearchParams): number {
+  const value = Number(searchParams.get("limit") ?? 12);
+  return [6, 12, 24, 48].includes(value) ? value : 12;
 }
 
 export function Specialties() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const lang = useAppStore((s) => s.lang);
   const c = copy(lang);
-  const [filters, setFilters] = useState<FilterState>(emptyFilters);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(emptyFilters);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(12);
+  const initialFilters = useMemo(() => filtersFromParams(searchParams), []);
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilters);
+  const [page, setPage] = useState(() => pageFromParams(searchParams));
+  const [limit, setLimit] = useState(() => limitFromParams(searchParams));
   const [data, setData] = useState<AcademicSpecialtyPage>({
     data: [],
     page: 1,
@@ -137,6 +168,7 @@ export function Specialties() {
   const [selected, setSelected] = useState<AcademicSpecialty | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(() => Object.values(initialFilters).some((value) => value.trim()));
 
   const totalPages = Math.max(data.total_pages, 1);
   const activeFilterCount = useMemo(
@@ -178,6 +210,16 @@ export function Specialties() {
     }
   };
 
+  const updateUrl = (nextFilters: FilterState, nextPage: number, nextLimit: number) => {
+    const params = new URLSearchParams();
+    Object.entries(compactFilters(nextFilters)).forEach(([key, value]) => {
+      params.set(key, value);
+    });
+    if (nextPage > 1) params.set("page", String(nextPage));
+    if (nextLimit !== 12) params.set("limit", String(nextLimit));
+    setSearchParams(params, { replace: true });
+  };
+
   useEffect(() => {
     void loadPage();
   }, [appliedFilters, page, limit, lang]);
@@ -201,6 +243,8 @@ export function Specialties() {
     setPage(1);
     setAppliedFilters(filters);
     setSelected(null);
+    setFiltersOpen(false);
+    updateUrl(filters, 1, limit);
   };
 
   const resetFilters = () => {
@@ -208,6 +252,8 @@ export function Specialties() {
     setAppliedFilters(emptyFilters);
     setPage(1);
     setSelected(null);
+    setFiltersOpen(false);
+    updateUrl(emptyFilters, 1, limit);
   };
 
   return (
@@ -259,7 +305,9 @@ export function Specialties() {
                   </Link>
                 </div>
               </div>
-              <SelectedPanel selected={selected} labels={c} />
+              <div className="lg:hidden">
+                <SelectedPanel selected={selected} labels={c} />
+              </div>
             </div>
           </div>
         </div>
@@ -287,11 +335,20 @@ export function Specialties() {
                 </div>
                 <h2 className="mt-1 text-2xl font-black text-slate-950 dark:text-white">{c.title}</h2>
               </div>
-              <div className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
-                {activeFilterCount ? `${activeFilterCount} filter` : t(lang, "all")}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen((prev) => !prev)}
+                  className="h-12 rounded-2xl bg-white/90 px-4 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 md:hidden dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                >
+                  {filtersOpen ? c.hideFilters : c.filters}
+                </button>
+                <div className="rounded-2xl bg-white/90 px-4 py-3 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
+                  {activeFilterCount ? `${activeFilterCount} filter` : t(lang, "all")}
+                </div>
               </div>
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className={`${filtersOpen ? "grid" : "hidden"} mt-5 gap-3 md:grid md:grid-cols-2 xl:grid-cols-4`}>
               <FilterInput label={c.search} value={filters.q} onChange={(value) => setFilter("q", value)} wide />
               <FilterInput label={c.university} value={filters.university} onChange={(value) => setFilter("university", value)} />
               <FilterInput label={c.place} value={filters.makon} onChange={(value) => setFilter("makon", value)} />
@@ -301,14 +358,14 @@ export function Specialties() {
               <FilterInput label={c.language} value={filters.language} onChange={(value) => setFilter("language", value)} />
               <FilterInput label={c.degree} value={filters.degree} onChange={(value) => setFilter("degree", value)} />
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button type="submit" className="rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-2.5 text-sm font-extrabold text-white shadow-card">
+            <div className={`${filtersOpen ? "flex" : "hidden"} mt-5 flex-wrap gap-2 md:flex`}>
+              <button type="submit" className="h-12 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 px-5 text-sm font-extrabold text-white shadow-card transition hover:-translate-y-0.5 hover:shadow-lg">
                 {c.apply}
               </button>
               <button
                 type="button"
                 onClick={resetFilters}
-                className="rounded-2xl bg-white px-5 py-2.5 text-sm font-extrabold text-slate-900 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                className="h-12 rounded-2xl bg-white px-5 text-sm font-extrabold text-slate-900 ring-1 ring-slate-200 transition hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
               >
                 {c.reset}
               </button>
@@ -316,28 +373,43 @@ export function Specialties() {
           </form>
 
           {error ? (
-            <div className="m-5 rounded-2xl bg-rose-100 px-4 py-3 text-sm font-bold text-rose-800 ring-1 ring-rose-200 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-900/50">
-              {error}
-            </div>
+            <StatusState type="error" title={error} actionLabel={c.retry} onAction={() => void loadPage()} />
           ) : null}
 
-          <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
-            {data.data.map((row, index) => (
-              <SpecialtyCard
-                key={row.id}
-                row={row}
-                selected={selected?.id === row.id}
-                labels={c}
-                delay={Math.min(index * 0.025, 0.25)}
-                onSelect={() => setSelected(row)}
-              />
-            ))}
+          <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div>
+              {loading && !data.data.length ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: limit }).map((_, index) => (
+                    <SpecialtyCardSkeleton key={index} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {data.data.map((row, index) => (
+                    <SpecialtyCard
+                      key={row.id}
+                      row={row}
+                      selected={selected?.id === row.id}
+                      labels={c}
+                      delay={Math.min(index * 0.025, 0.25)}
+                      onSelect={() => setSelected(row)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <aside className="hidden lg:block">
+              <div className="lg:sticky lg:top-24">
+                <SelectedPanel selected={selected} labels={c} variant="light" />
+              </div>
+            </aside>
           </div>
 
           {!loading && !error && data.data.length === 0 ? (
-            <div className="px-5 pb-8 text-center text-sm font-bold text-slate-500 dark:text-slate-400">{c.empty}</div>
+            <StatusState type="empty" title={c.empty} actionLabel={c.reset} onAction={resetFilters} />
           ) : null}
-          {loading ? (
+          {loading && data.data.length ? (
             <div className="px-5 pb-8 text-center text-sm font-bold text-slate-500 dark:text-slate-400">{c.loading}</div>
           ) : null}
 
@@ -347,11 +419,13 @@ export function Specialties() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-extrabold text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 value={limit}
                 onChange={(e) => {
-                  setLimit(Number(e.target.value));
+                  const nextLimit = Number(e.target.value);
+                  setLimit(nextLimit);
                   setPage(1);
+                  updateUrl(appliedFilters, 1, nextLimit);
                 }}
               >
                 {[6, 12, 24, 48].map((value) => (
@@ -363,16 +437,24 @@ export function Specialties() {
               <button
                 type="button"
                 disabled={page <= 1 || loading}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                className="rounded-2xl bg-white px-4 py-2 text-xs font-extrabold text-slate-900 ring-1 ring-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                onClick={() => {
+                  const nextPage = Math.max(1, page - 1);
+                  setPage(nextPage);
+                  updateUrl(appliedFilters, nextPage, limit);
+                }}
+                className="h-12 rounded-2xl bg-white px-4 text-xs font-extrabold text-slate-900 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
               >
                 {c.back}
               </button>
               <button
                 type="button"
                 disabled={page >= totalPages || loading}
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                className="rounded-2xl bg-white px-4 py-2 text-xs font-extrabold text-slate-900 ring-1 ring-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                onClick={() => {
+                  const nextPage = Math.min(totalPages, page + 1);
+                  setPage(nextPage);
+                  updateUrl(appliedFilters, nextPage, limit);
+                }}
+                className="h-12 rounded-2xl bg-white px-4 text-xs font-extrabold text-slate-900 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
               >
                 {c.next}
               </button>
@@ -408,21 +490,88 @@ function FilterInput({
   );
 }
 
+function StatusState({
+  type,
+  title,
+  actionLabel,
+  onAction,
+}: {
+  type: "empty" | "error";
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  const tone =
+    type === "error"
+      ? "bg-rose-50 text-rose-800 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900/60"
+      : "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-slate-700";
+  return (
+    <div className={`mx-5 mb-6 rounded-3xl px-5 py-6 text-center ring-1 ${tone}`}>
+      <div className="text-sm font-black">{title}</div>
+      {actionLabel && onAction ? (
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-4 h-12 rounded-2xl bg-white px-5 text-sm font-extrabold text-slate-900 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700"
+        >
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function SpecialtyCardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-[1.65rem] bg-white p-5 shadow-card ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-700">
+      <div className="flex justify-between gap-3">
+        <div className="h-7 w-24 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-700" />
+      </div>
+      <div className="mt-5 h-5 w-5/6 rounded bg-slate-200 dark:bg-slate-700" />
+      <div className="mt-3 h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
+      <div className="mt-6 grid gap-2">
+        <div className="h-3 w-4/5 rounded bg-slate-200 dark:bg-slate-700" />
+        <div className="h-3 w-3/5 rounded bg-slate-200 dark:bg-slate-700" />
+      </div>
+      <div className="mt-5 flex gap-2">
+        <div className="h-7 w-20 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="h-7 w-20 rounded-full bg-slate-200 dark:bg-slate-700" />
+      </div>
+      <div className="mt-5 h-12 rounded-2xl bg-slate-200 dark:bg-slate-700" />
+    </div>
+  );
+}
+
 function SelectedPanel({
   selected,
   labels,
+  variant = "dark",
 }: {
   selected: AcademicSpecialty | null;
   labels: ReturnType<typeof copy>;
+  variant?: "dark" | "light";
 }) {
+  const isLight = variant === "light";
   return (
-    <div className="rounded-[1.75rem] bg-white/10 p-5 ring-1 ring-white/15 backdrop-blur">
-      <div className="text-xs font-black uppercase tracking-[0.16em] text-sky-100">{labels.selected}</div>
+    <div
+      className={[
+        "rounded-[1.75rem] p-5 backdrop-blur",
+        isLight
+          ? "bg-gradient-to-br from-white to-indigo-50 shadow-card ring-1 ring-indigo-100 dark:from-slate-900 dark:to-slate-800 dark:ring-slate-700"
+          : "bg-white/10 ring-1 ring-white/15",
+      ].join(" ")}
+    >
+      <div className={["text-xs font-black uppercase tracking-[0.16em]", isLight ? "text-indigo-600 dark:text-indigo-300" : "text-sky-100"].join(" ")}>
+        {labels.selected}
+      </div>
       {selected ? (
         <div className="mt-3">
-          <div className="text-xl font-black leading-tight text-white">{selected.name}</div>
-          <div className="mt-2 text-sm font-semibold text-slate-200">{selected.university_name}</div>
-          <div className="mt-4 grid gap-2 text-xs font-bold text-slate-200">
+          <div className={["text-xl font-black leading-tight", isLight ? "text-slate-950 dark:text-white" : "text-white"].join(" ")}>{selected.name}</div>
+          <div className={["mt-2 text-sm font-semibold", isLight ? "text-slate-600 dark:text-slate-300" : "text-slate-200"].join(" ")}>
+            {selected.university_name}
+          </div>
+          <div className={["mt-4 grid gap-2 text-xs font-bold", isLight ? "text-slate-600 dark:text-slate-300" : "text-slate-200"].join(" ")}>
             <div>{selected.faculty_code ? `${selected.faculty_code} · ` : ""}{selected.faculty_name}</div>
             <div>{[selected.region, selected.city, selected.district].filter(Boolean).join(" / ") || "—"}</div>
             <div>{selected.study_mode ?? "—"} · {selected.language ?? "—"}</div>
@@ -430,7 +579,9 @@ function SelectedPanel({
           </div>
         </div>
       ) : (
-        <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{labels.detailsHint}</p>
+        <p className={["mt-3 text-sm font-semibold leading-6", isLight ? "text-slate-500 dark:text-slate-400" : "text-slate-300"].join(" ")}>
+          {labels.detailsHint}
+        </p>
       )}
     </div>
   );
@@ -450,21 +601,36 @@ function SpecialtyCard({
   onSelect: () => void;
 }) {
   const place = [row.region, row.city, row.district].filter(Boolean).join(" / ") || "—";
+  const tuitionTone =
+    row.is_free === true || (row.tuition ?? "").toLowerCase().includes("ройгон") || (row.tuition ?? "").toLowerCase().includes("бепул")
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-200"
+      : "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-200";
   return (
     <motion.article
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.28 }}
       className={[
-        "group flex flex-col rounded-[1.65rem] bg-white p-5 shadow-card ring-1 transition hover:-translate-y-1 hover:shadow-soft dark:bg-slate-900",
-        selected ? "ring-2 ring-indigo-400" : "ring-slate-200/80 dark:ring-slate-700",
+        "group relative flex flex-col rounded-[1.65rem] bg-white p-5 shadow-card ring-1 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-slate-900",
+        selected ? "bg-indigo-50/50 ring-2 ring-indigo-400 dark:bg-indigo-950/20" : "ring-slate-200/80 hover:ring-indigo-200 dark:ring-slate-700",
       ].join(" ")}
     >
+      {selected ? (
+        <div className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-emerald-500 text-white shadow-card ring-2 ring-white dark:ring-slate-900">
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
+            <path
+              fillRule="evenodd"
+              d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.32a1 1 0 0 1-1.42 0l-3.25-3.28a1 1 0 1 1 1.42-1.408l2.54 2.563 6.54-6.603a1 1 0 0 1 1.414-.006Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <span className="rounded-2xl bg-indigo-100 px-3 py-1.5 font-mono text-xs font-black text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
           {row.code ?? `ID ${row.id}`}
         </span>
-        <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-200">
+        <span className={`rounded-full px-3 py-1 text-[11px] font-black ${tuitionTone}`}>
           {row.tuition ?? "—"}
         </span>
       </div>
@@ -489,7 +655,7 @@ function SpecialtyCard({
         type="button"
         onClick={onSelect}
         className={[
-          "mt-5 rounded-2xl px-4 py-2.5 text-sm font-extrabold transition",
+          "mt-5 h-12 rounded-2xl px-4 text-sm font-extrabold transition",
           selected
             ? "bg-indigo-600 text-white shadow-card"
             : "bg-slate-100 text-slate-900 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-100",

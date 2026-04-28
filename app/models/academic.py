@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -34,7 +34,11 @@ class University(Base):
 
 class Faculty(Base):
     __tablename__ = "faculties"
-    __table_args__ = (UniqueConstraint("university_id", "name", name="uq_faculty_university_name"),)
+    __table_args__ = (
+        UniqueConstraint("university_id", "name", name="uq_faculty_university_name"),
+        Index("ix_faculties_code", "code"),
+        Index("ix_faculties_name", "name"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     university_id: Mapped[int] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
@@ -52,6 +56,13 @@ class Faculty(Base):
 
 class Specialty(Base):
     __tablename__ = "specialties"
+    __table_args__ = (
+        Index("ix_specialties_code", "code"),
+        Index("ix_specialties_language", "language"),
+        Index("ix_specialties_study_mode", "study_mode"),
+        Index("ix_specialties_tuition", "tuition"),
+        Index("ix_specialties_degree", "degree"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     faculty_id: Mapped[int] = mapped_column(ForeignKey("faculties.id", ondelete="CASCADE"), index=True)
