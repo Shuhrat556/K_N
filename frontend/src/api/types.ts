@@ -123,32 +123,45 @@ export type AdminStats = {
 
 export type AcademicUniversity = {
   id: number;
+  serial_no?: number | null;
   name: string;
+  region?: string | null;
   city?: string | null;
   district?: string | null;
+  phone?: string | null;
 };
 
 export type AcademicFaculty = {
   id: number;
   university_id: number;
+  code?: string | null;
   name: string;
+  source_sheet?: string | null;
+  university_name?: string | null;
 };
 
 export type AcademicSpecialty = {
   id: number;
   faculty_id: number;
+  excel_id?: number | null;
   code?: string | null;
   name: string;
   study_mode?: string | null;
   language?: string | null;
   tuition?: string | null;
   admission_quota?: string | null;
+  degree?: string | null;
+  is_free?: boolean | null;
+  price?: number | null;
   source_sheet?: string | null;
   faculty_name: string;
+  faculty_code?: string | null;
   university_id: number;
   university_name: string;
+  region?: string | null;
   city?: string | null;
   district?: string | null;
+  phone?: string | null;
 };
 
 export type AcademicImportResult = {

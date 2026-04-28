@@ -82,6 +82,8 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
       (s) =>
         s.name.toLowerCase().includes(q) ||
         (s.code ?? "").toLowerCase().includes(q) ||
+        (s.faculty_code ?? "").toLowerCase().includes(q) ||
+        (s.degree ?? "").toLowerCase().includes(q) ||
         (s.admission_quota ?? "").toLowerCase().includes(q) ||
         s.university_name.toLowerCase().includes(q) ||
         s.faculty_name.toLowerCase().includes(q),
@@ -405,7 +407,10 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
                   <div>
                     <div className="font-semibold text-ink-900 dark:text-slate-100">{u.name}</div>
                     <div className="text-xs text-ink-500 dark:text-slate-400">
-                      {u.city ?? "—"} · {u.district ?? "—"}
+                      {[u.region, u.city, u.district].filter(Boolean).join(" · ") || "—"}
+                    </div>
+                    <div className="text-[11px] text-ink-500 dark:text-slate-400">
+                      {u.phone ?? "телефон не указан"}
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -435,8 +440,11 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
               {faculties.map((f) => (
                 <li key={f.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
                   <div>
-                    <div className="font-semibold text-ink-900 dark:text-slate-100">{f.name}</div>
-                    <div className="text-xs text-ink-500 dark:text-slate-400">university_id: {f.university_id}</div>
+                    <div className="font-semibold text-ink-900 dark:text-slate-100">
+                      {f.code ? `${f.code} — ` : ""}
+                      {f.name}
+                    </div>
+                    <div className="text-xs text-ink-500 dark:text-slate-400">{f.university_name ?? `university_id: ${f.university_id}`}</div>
                   </div>
                   <div className="flex gap-1">
                     <button
@@ -470,10 +478,11 @@ export function AdminAcademicTab({ inputClass, sectionCardClass }: Props) {
                       {s.name}
                     </div>
                     <div className="text-xs text-ink-500 dark:text-slate-400">
-                      {s.university_name} · {s.faculty_name}
+                      {s.university_name} · {s.faculty_code ? `${s.faculty_code} — ` : ""}
+                      {s.faculty_name}
                     </div>
                     <div className="text-[11px] text-ink-500 dark:text-slate-400">
-                      Нақша: {s.admission_quota ?? "—"}
+                      Нақша: {s.admission_quota ?? "—"} · Дараҷа: {s.degree ?? "—"} · Нарх: {s.price ?? "—"}
                     </div>
                   </div>
                   <div className="flex gap-1">

@@ -155,9 +155,12 @@ export async function fetchAcademicUniversities(): Promise<AcademicUniversity[]>
 }
 
 export async function createAcademicUniversity(payload: {
+  serial_no?: number | null;
   name: string;
+  region?: string | null;
   city?: string | null;
   district?: string | null;
+  phone?: string | null;
 }): Promise<AcademicUniversity> {
   const { data } = await api.post<AcademicUniversity>("/admin/academic/universities", payload);
   return data;
@@ -165,7 +168,14 @@ export async function createAcademicUniversity(payload: {
 
 export async function updateAcademicUniversity(
   id: number,
-  payload: { name?: string; city?: string | null; district?: string | null },
+  payload: {
+    serial_no?: number | null;
+    name?: string;
+    region?: string | null;
+    city?: string | null;
+    district?: string | null;
+    phone?: string | null;
+  },
 ): Promise<AcademicUniversity> {
   const { data } = await api.patch<AcademicUniversity>(`/admin/academic/universities/${id}`, payload);
   return data;
@@ -182,14 +192,19 @@ export async function fetchAcademicFaculties(universityId?: number): Promise<Aca
   return data;
 }
 
-export async function createAcademicFaculty(payload: { university_id: number; name: string }): Promise<AcademicFaculty> {
+export async function createAcademicFaculty(payload: {
+  university_id: number;
+  code?: string | null;
+  name: string;
+  source_sheet?: string | null;
+}): Promise<AcademicFaculty> {
   const { data } = await api.post<AcademicFaculty>("/admin/academic/faculties", payload);
   return data;
 }
 
 export async function updateAcademicFaculty(
   id: number,
-  payload: { university_id?: number; name?: string },
+  payload: { university_id?: number; code?: string | null; name?: string; source_sheet?: string | null },
 ): Promise<AcademicFaculty> {
   const { data } = await api.patch<AcademicFaculty>(`/admin/academic/faculties/${id}`, payload);
   return data;
@@ -203,6 +218,7 @@ export async function fetchAcademicSpecialties(params?: {
   university_id?: number;
   faculty_id?: number;
   specialty_id?: number;
+  group_code?: string;
   samt?: string;
   university?: string;
   makon?: string;
@@ -211,6 +227,10 @@ export async function fetchAcademicSpecialties(params?: {
   tuition?: string;
   language?: string;
   admission_quota?: string;
+  degree?: string;
+  free_only?: boolean;
+  price_min?: number;
+  price_max?: number;
   q?: string;
 }): Promise<AcademicSpecialty[]> {
   const { data } = await api.get<AcademicSpecialty[]>("/academic/specialties", { params });
@@ -221,6 +241,7 @@ export async function fetchAdminAcademicSpecialties(params?: {
   university_id?: number;
   faculty_id?: number;
   specialty_id?: number;
+  group_code?: string;
   samt?: string;
   university?: string;
   makon?: string;
@@ -229,6 +250,10 @@ export async function fetchAdminAcademicSpecialties(params?: {
   tuition?: string;
   language?: string;
   admission_quota?: string;
+  degree?: string;
+  free_only?: boolean;
+  price_min?: number;
+  price_max?: number;
   q?: string;
 }): Promise<AcademicSpecialty[]> {
   const { data } = await api.get<AcademicSpecialty[]>("/admin/academic/specialties", { params });
@@ -237,12 +262,16 @@ export async function fetchAdminAcademicSpecialties(params?: {
 
 export async function createAcademicSpecialty(payload: {
   faculty_id: number;
+  excel_id?: number | null;
   code?: string | null;
   name: string;
   study_mode?: string | null;
   language?: string | null;
   tuition?: string | null;
   admission_quota?: string | null;
+  degree?: string | null;
+  is_free?: boolean | null;
+  price?: number | null;
   source_sheet?: string | null;
 }): Promise<void> {
   await api.post("/admin/academic/specialties", payload);
@@ -252,12 +281,16 @@ export async function updateAcademicSpecialty(
   id: number,
   payload: {
     faculty_id?: number;
+    excel_id?: number | null;
     code?: string | null;
     name?: string;
     study_mode?: string | null;
     language?: string | null;
     tuition?: string | null;
     admission_quota?: string | null;
+    degree?: string | null;
+    is_free?: boolean | null;
+    price?: number | null;
     source_sheet?: string | null;
   },
 ): Promise<void> {

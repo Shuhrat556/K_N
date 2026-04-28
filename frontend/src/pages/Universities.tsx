@@ -199,7 +199,10 @@ export function Universities() {
                 className="border-b border-slate-100 odd:bg-white even:bg-slate-50/60 dark:border-slate-700 dark:odd:bg-slate-900 dark:even:bg-slate-800/40"
               >
                 <td className="sticky left-0 z-[1] whitespace-nowrap bg-inherit px-3 py-2.5 font-mono font-bold tabular-nums text-slate-700 dark:text-slate-200">{r.id}</td>
-                <td className="max-w-[160px] px-3 py-2.5 font-semibold text-slate-900 dark:text-slate-100">{r.faculty_name}</td>
+                <td className="max-w-[160px] px-3 py-2.5 font-semibold text-slate-900 dark:text-slate-100">
+                  {r.faculty_code ? `${r.faculty_code} — ` : ""}
+                  {r.faculty_name}
+                </td>
                 <td className="px-3 py-2.5 font-semibold text-indigo-800 dark:text-indigo-300">
                   {r.code ? `${r.code} — ` : ""}
                   {r.name}
