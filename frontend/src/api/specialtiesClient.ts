@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const specialtiesBaseURL = import.meta.env.VITE_SPECIALTIES_API_URL?.replace(/\/$/, "") || "http://localhost:4001";
+const specialtiesBaseURL = import.meta.env.VITE_SPECIALTIES_API_URL?.replace(/\/$/, "") || "";
 
 export const specialtiesApi = axios.create({
   baseURL: specialtiesBaseURL,

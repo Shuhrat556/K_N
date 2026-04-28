@@ -10,6 +10,7 @@ from sqlalchemy import delete, distinct, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.admin_auth import require_admin_key
 from app.api.deps import get_db
 from app.models.answer import Answer
 from app.models.catalog import Cluster, Group, Question, QuestionPhase
@@ -29,7 +30,7 @@ from app.schemas.admin import (
     validate_option_labels_for_phase,
 )
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
 
 _UNSET = object()
 

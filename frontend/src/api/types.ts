@@ -175,6 +175,14 @@ export type AcademicImportResult = {
   skipped_rows: number;
 };
 
+export type AcademicSpecialtyPage = {
+  data: AcademicSpecialty[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
 // New Express backend Specialty types
 export type Specialty = {
   id: number;

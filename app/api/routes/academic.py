@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.admin_auth import require_admin_key
 from app.api.deps import get_db
 from app.models.academic import Faculty, Specialty, University
 from app.schemas.academic import (
@@ -18,6 +19,7 @@ from app.schemas.academic import (
     SpecialtyIn,
     SpecialtyListOut,
     SpecialtyOut,
+    SpecialtyPageOut,
     SpecialtyUpdate,
     UniversityIn,
     UniversityOut,
@@ -31,7 +33,7 @@ except ImportError:  # pragma: no cover - environment-dependent
     load_workbook = None
 
 
-admin_router = APIRouter(prefix="/admin/academic", tags=["admin-academic"])
+admin_router = APIRouter(prefix="/admin/academic", tags=["admin-academic"], dependencies=[Depends(require_admin_key)])
 public_router = APIRouter(prefix="/academic", tags=["academic"])
 
 
@@ -369,6 +371,134 @@ def list_specialties(
     return [_specialty_row_to_out(*r) for r in rows]
 
 
+@admin_router.get("/specialties/page", response_model=SpecialtyPageOut)
+def list_specialties_page(
+    university_id: Optional[int] = Query(default=None),
+    faculty_id: Optional[int] = Query(default=None),
+    specialty_id: Optional[int] = Query(default=None),
+    group_code: Optional[str] = Query(default=None, description="Код группы / лист Excel"),
+    samt: Optional[str] = Query(default=None, description="Группа / факультет / самт — частичное совпадение"),
+    university: Optional[str] = Query(default=None, description="Название муассиса — частичное совпадение"),
+    makon: Optional[str] = Query(default=None, description="Город или район / колонка макон"),
+    code_name: Optional[str] = Query(default=None, description="Рамз ё номи ихтисос"),
+    study_mode: Optional[str] = Query(default=None),
+    tuition: Optional[str] = Query(default=None, description="Намуди таҳсил / маблағ"),
+    language: Optional[str] = Query(default=None),
+    admission_quota: Optional[str] = Query(default=None, description="Нақшаи қабул"),
+    degree: Optional[str] = Query(default=None),
+    free_only: Optional[bool] = Query(default=None),
+    price_min: Optional[int] = Query(default=None, ge=0),
+    price_max: Optional[int] = Query(default=None, ge=0),
+    q: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    stmt = (
+        select(
+            Specialty,
+            Faculty.name,
+            Faculty.code,
+            University.id,
+            University.name,
+            University.region,
+            University.city,
+            University.district,
+            University.phone,
+        )
+        .join(Faculty, Faculty.id == Specialty.faculty_id)
+        .join(University, University.id == Faculty.university_id)
+    )
+    if specialty_id is not None:
+        stmt = stmt.where(Specialty.id == specialty_id)
+    if university_id is not None:
+        stmt = stmt.where(University.id == university_id)
+    if faculty_id is not None:
+        stmt = stmt.where(Faculty.id == faculty_id)
+    if group_code and group_code.strip():
+        term = f"%{group_code.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Faculty.code, "")).like(term))
+    if samt and samt.strip():
+        term = f"%{samt.strip().lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(Faculty.name).like(term),
+                func.lower(func.coalesce(Faculty.code, "")).like(term),
+            )
+        )
+    if university and university.strip():
+        term = f"%{university.strip().lower()}%"
+        stmt = stmt.where(func.lower(University.name).like(term))
+    if makon and makon.strip():
+        term = f"%{makon.strip().lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(func.coalesce(University.city, "")).like(term),
+                func.lower(func.coalesce(University.district, "")).like(term),
+                func.lower(
+                    func.trim(
+                        func.concat_ws(
+                            " ",
+                            func.coalesce(University.city, ""),
+                            func.coalesce(University.district, ""),
+                        )
+                    )
+                ).like(term),
+            )
+        )
+    if code_name and code_name.strip():
+        term = f"%{code_name.strip().lower()}%"
+        stmt = stmt.where(
+            func.lower(Specialty.name).like(term) | func.lower(func.coalesce(Specialty.code, "")).like(term)
+        )
+    if study_mode and study_mode.strip():
+        term = f"%{study_mode.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.study_mode, "")).like(term))
+    if tuition and tuition.strip():
+        term = f"%{tuition.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.tuition, "")).like(term))
+    if language and language.strip():
+        term = f"%{language.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.language, "")).like(term))
+    if admission_quota and admission_quota.strip():
+        term = f"%{admission_quota.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.admission_quota, "")).like(term))
+    if degree and degree.strip():
+        term = f"%{degree.strip().lower()}%"
+        stmt = stmt.where(func.lower(func.coalesce(Specialty.degree, "")).like(term))
+    if free_only is not None:
+        stmt = stmt.where(Specialty.is_free.is_(free_only))
+    if price_min is not None:
+        stmt = stmt.where(Specialty.price >= price_min)
+    if price_max is not None:
+        stmt = stmt.where(Specialty.price <= price_max)
+    if q:
+        term = f"%{q.strip().lower()}%"
+        stmt = stmt.where(
+            func.lower(Specialty.name).like(term)
+            | func.lower(func.coalesce(Specialty.code, "")).like(term)
+            | func.lower(func.coalesce(Specialty.degree, "")).like(term)
+            | func.lower(Faculty.name).like(term)
+            | func.lower(func.coalesce(Faculty.code, "")).like(term)
+            | func.lower(University.name).like(term)
+        )
+
+    total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    total_pages = (total + limit - 1) // limit if total else 0
+    rows = db.execute(
+        stmt.order_by(University.name, Faculty.code, Faculty.name, Specialty.name, Specialty.id)
+        .offset((page - 1) * limit)
+        .limit(limit)
+    ).all()
+    return SpecialtyPageOut(
+        data=[_specialty_row_to_out(*r) for r in rows],
+        page=page,
+        limit=limit,
+        total=total,
+        total_pages=total_pages,
+    )
+
+
 @admin_router.post("/specialties", response_model=SpecialtyOut)
 def create_specialty(body: SpecialtyIn, db: Session = Depends(get_db)):
     if not db.get(Faculty, body.faculty_id):
@@ -484,7 +614,7 @@ async def import_academic_excel(
 
     raw = await file.read()
     try:
-        wb = load_workbook(filename=BytesIO(raw), data_only=True)
+        wb = load_workbook(filename=BytesIO(raw), data_only=True, read_only=True)
     except Exception as e:  # pragma: no cover - input dependent
         raise HTTPException(status_code=400, detail=f"Failed to read Excel file: {e}") from e
 

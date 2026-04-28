@@ -149,11 +149,9 @@ def build_specialty_entry_key(
     admission_quota: str | None,
     degree: str | None,
 ) -> str:
-    if excel_id is not None:
-        return f"excel:{excel_id}"
-
     payload = "|".join(
         [
+            str(excel_id or ""),
             str(faculty_id),
             _norm(code),
             _norm(name),
@@ -165,7 +163,7 @@ def build_specialty_entry_key(
         ]
     )
     digest = hashlib.sha1(payload.encode("utf-8")).hexdigest()
-    return f"manual:{digest}"
+    return f"specialty:{digest}"
 
 
 class AcademicImportService:
@@ -228,14 +226,17 @@ class AcademicImportService:
             if roster_sheet is not None and sheet.title == roster_sheet.title:
                 continue
 
-            rows = list(sheet.iter_rows(values_only=True))
-            if len(rows) < 2:
+            preview_rows = list(sheet.iter_rows(min_row=1, max_row=min(sheet.max_row or 0, 12), values_only=True))
+            if len(preview_rows) < 2:
                 continue
 
             stats["sheets_read"] += 1
-            header_idx, headers = _detect_header_row(rows)
+            header_idx, headers = _detect_header_row(preview_rows)
             group_code = _to_text(sheet.title) or "GROUP"
-            group_title = _parse_group_title(_to_text(rows[0][0]) if rows and rows[0] else None, group_code)
+            group_title = _parse_group_title(
+                _to_text(preview_rows[0][0]) if preview_rows and preview_rows[0] else None,
+                group_code,
+            )
 
             c_id = _match_col(headers, ("id",))
             c_spec = _match_col(headers, ("ихтисос", "ixtisos", "special", "номи ихтисос", "рамз ва ном"))
@@ -253,7 +254,7 @@ class AcademicImportService:
             c_degree = _match_col(headers, ("дараҷа", "степ", "degree", "ток", "тмк"))
             c_code = _match_col(headers, ("рамз", "code"))
 
-            for row in rows[header_idx + 1 :]:
+            for row in sheet.iter_rows(min_row=header_idx + 2, values_only=True):
                 stats["rows_seen"] += 1
                 university_name = _to_text(row[c_uni]) if c_uni is not None and c_uni < len(row) else None
                 specialty_raw = _to_text(row[c_spec]) if c_spec is not None and c_spec < len(row) else None
@@ -361,13 +362,13 @@ class AcademicImportService:
         return stats
 
     def _read_roster(self, sheet: Any) -> dict[str, dict[str, Any]]:
-        rows = list(sheet.iter_rows(values_only=True))
-        if not rows:
+        preview_rows = list(sheet.iter_rows(min_row=1, max_row=min(sheet.max_row or 0, 10), values_only=True))
+        if not preview_rows:
             return {}
 
         header_idx = 0
         headers: dict[str, int] = {}
-        for ridx, row in enumerate(rows[:10]):
+        for ridx, row in enumerate(preview_rows):
             current = {}
             for cidx, cell in enumerate(row):
                 tx = _norm(_to_text(cell))
@@ -387,7 +388,7 @@ class AcademicImportService:
         c_phone = _match_col(headers, ("телефон", "phone"))
 
         roster: dict[str, dict[str, Any]] = {}
-        for row in rows[header_idx + 1 :]:
+        for row in sheet.iter_rows(min_row=header_idx + 2, values_only=True):
             name = _to_text(row[c_name]) if c_name is not None and c_name < len(row) else None
             if not name:
                 continue

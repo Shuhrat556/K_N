@@ -3,6 +3,7 @@ import { specialtiesApi } from "./specialtiesClient";
 import type {
   AcademicFaculty,
   AcademicImportResult,
+  AcademicSpecialtyPage,
   AcademicSpecialty,
   AcademicUniversity,
   AdminCluster,
@@ -259,6 +260,31 @@ export async function fetchAdminAcademicSpecialties(params?: {
   q?: string;
 }): Promise<AcademicSpecialty[]> {
   const { data } = await api.get<AcademicSpecialty[]>("/admin/academic/specialties", { params });
+  return data;
+}
+
+export async function fetchAdminAcademicSpecialtiesPage(params?: {
+  university_id?: number;
+  faculty_id?: number;
+  specialty_id?: number;
+  group_code?: string;
+  samt?: string;
+  university?: string;
+  makon?: string;
+  code_name?: string;
+  study_mode?: string;
+  tuition?: string;
+  language?: string;
+  admission_quota?: string;
+  degree?: string;
+  free_only?: boolean;
+  price_min?: number;
+  price_max?: number;
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<AcademicSpecialtyPage> {
+  const { data } = await api.get<AcademicSpecialtyPage>("/admin/academic/specialties/page", { params });
   return data;
 }
 

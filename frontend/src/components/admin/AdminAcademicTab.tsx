@@ -65,21 +65,21 @@ export function AdminAcademicTab({
   const headerTitle =
     title ??
     (mode === "import"
-      ? "Excel yuklash"
+      ? "Загрузка Excel"
       : mode === "specialties"
-        ? "Ixtisosliklar"
+        ? "Специальности"
         : mode === "universities"
-          ? "Muassasalar"
-          : "Universitetlar / yo'nalishlar / ixtisosliklar");
+          ? "Учебные заведения"
+          : "Университеты / направления / специальности");
   const headerDescription =
     description ??
     (mode === "import"
-      ? "Excel faylni tekshirish va katalogga yuklash."
+      ? "Проверка Excel-файла и загрузка данных в каталог."
       : mode === "specialties"
-        ? "Ixtisosliklar ro'yxati va qo'lda qo'shish."
+        ? "Список специальностей и ручное добавление."
         : mode === "universities"
-          ? "Universitet va yo'nalishlar ro'yxati."
-          : "Faqat real ma'lumotlar. Excel import ko'p varaqlar bilan ishlaydi.");
+          ? "Список университетов и направлений."
+          : "Только реальные данные. Импорт Excel поддерживает несколько листов.");
 
   const loadAll = async () => {
     setLoading(true);
@@ -346,7 +346,7 @@ export function AdminAcademicTab({
             />
             <label className="inline-flex items-center gap-2 rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-ink-800 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600">
               <input type="checkbox" checked={clearExisting} onChange={(e) => setClearExisting(e.target.checked)} />
-              Oldingi katalogni tozalash
+              Очистить старый каталог
             </label>
           </div>
           <button
@@ -354,7 +354,7 @@ export function AdminAcademicTab({
             disabled={importing}
             className="mt-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft disabled:opacity-60"
           >
-            {importing ? "Import..." : "Excel yuklash"}
+            {importing ? "Импорт..." : "Загрузить Excel"}
           </button>
         </form>
       ) : null}
@@ -364,23 +364,23 @@ export function AdminAcademicTab({
           {showUniversityTools ? (
             <>
               <form onSubmit={onCreateUniversity} className={sectionCardClass}>
-                <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Universitet qo'shish</h3>
+                <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Добавить университет</h3>
                 <div className="mt-3 space-y-2">
-                  <input className={inputClass} placeholder="Nomi" value={uniName} onChange={(e) => setUniName(e.target.value)} required />
-                  <input className={inputClass} placeholder="Shahar" value={uniCity} onChange={(e) => setUniCity(e.target.value)} />
-                  <input className={inputClass} placeholder="Hudud" value={uniDistrict} onChange={(e) => setUniDistrict(e.target.value)} />
+                  <input className={inputClass} placeholder="Название" value={uniName} onChange={(e) => setUniName(e.target.value)} required />
+                  <input className={inputClass} placeholder="Город" value={uniCity} onChange={(e) => setUniCity(e.target.value)} />
+                  <input className={inputClass} placeholder="Регион" value={uniDistrict} onChange={(e) => setUniDistrict(e.target.value)} />
                 </div>
                 <button type="submit" className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white dark:bg-indigo-600">
-                  Saqlash
+                  Сохранить
                 </button>
               </form>
 
               <form onSubmit={onCreateFaculty} className={sectionCardClass}>
-                <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Yo'nalish qo'shish</h3>
+                <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Добавить направление</h3>
                 <div className="mt-3 space-y-2">
                   <select className={inputClass} value={facultyUniversityId || ""} onChange={(e) => setFacultyUniversityId(Number(e.target.value))} required>
                     <option value="" disabled>
-                      Universitet tanlang
+                      Выберите университет
                     </option>
                     {universities.map((u) => (
                       <option key={u.id} value={u.id}>
@@ -388,10 +388,10 @@ export function AdminAcademicTab({
                       </option>
                     ))}
                   </select>
-                  <input className={inputClass} placeholder="Yo'nalish nomi" value={facultyName} onChange={(e) => setFacultyName(e.target.value)} required />
+                  <input className={inputClass} placeholder="Название направления" value={facultyName} onChange={(e) => setFacultyName(e.target.value)} required />
                 </div>
                 <button type="submit" className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white dark:bg-indigo-600">
-                  Saqlash
+                  Сохранить
                 </button>
               </form>
             </>
@@ -399,11 +399,11 @@ export function AdminAcademicTab({
 
           {showSpecialtyTools ? (
             <form onSubmit={onCreateSpecialty} className={sectionCardClass}>
-              <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Ixtisoslik qo'shish</h3>
+              <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">Добавить специальность</h3>
               <div className="mt-3 space-y-2">
                 <select className={inputClass} value={specFacultyId || ""} onChange={(e) => setSpecFacultyId(Number(e.target.value))} required>
                   <option value="" disabled>
-                    Yo'nalish tanlang
+                    Выберите направление
                   </option>
                   {faculties.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -411,15 +411,15 @@ export function AdminAcademicTab({
                     </option>
                   ))}
                 </select>
-                <input className={inputClass} placeholder="Kod" value={specCode} onChange={(e) => setSpecCode(e.target.value)} />
-                <input className={inputClass} placeholder="Ixtisoslik nomi" value={specName} onChange={(e) => setSpecName(e.target.value)} required />
-                <input className={inputClass} placeholder="Ta'lim shakli" value={specMode} onChange={(e) => setSpecMode(e.target.value)} />
-                <input className={inputClass} placeholder="Til" value={specLang} onChange={(e) => setSpecLang(e.target.value)} />
-                <input className={inputClass} placeholder="Kontrakt / bepul" value={specTuition} onChange={(e) => setSpecTuition(e.target.value)} />
-                <input className={inputClass} placeholder="Kvota" value={specAdmission} onChange={(e) => setSpecAdmission(e.target.value)} />
+                <input className={inputClass} placeholder="Код" value={specCode} onChange={(e) => setSpecCode(e.target.value)} />
+                <input className={inputClass} placeholder="Название специальности" value={specName} onChange={(e) => setSpecName(e.target.value)} required />
+                <input className={inputClass} placeholder="Форма обучения" value={specMode} onChange={(e) => setSpecMode(e.target.value)} />
+                <input className={inputClass} placeholder="Язык" value={specLang} onChange={(e) => setSpecLang(e.target.value)} />
+                <input className={inputClass} placeholder="Контракт / бесплатно" value={specTuition} onChange={(e) => setSpecTuition(e.target.value)} />
+                <input className={inputClass} placeholder="Квота" value={specAdmission} onChange={(e) => setSpecAdmission(e.target.value)} />
               </div>
               <button type="submit" className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white dark:bg-indigo-600">
-                Saqlash
+                Сохранить
               </button>
             </form>
           ) : null}
@@ -430,14 +430,14 @@ export function AdminAcademicTab({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h3 className="text-base font-extrabold text-ink-900 dark:text-slate-50">
             {mode === "universities"
-              ? "Muassasalar ro'yxati"
+              ? "Список учебных заведений"
               : mode === "specialties"
-                ? "Ixtisosliklar ro'yxati"
-                : "Joriy ma'lumotlar"}
+                ? "Список специальностей"
+                : "Текущие данные"}
           </h3>
           <input
             className={inputClass + " max-w-xs"}
-            placeholder="Qidirish..."
+            placeholder="Поиск..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -446,7 +446,7 @@ export function AdminAcademicTab({
         <div className="mt-4 grid gap-6 lg:grid-cols-3">
           {mode !== "specialties" ? (
             <div>
-              <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Muassasalar</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Учебные заведения</div>
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                 {universities.map((u) => (
                   <li key={u.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
@@ -456,7 +456,7 @@ export function AdminAcademicTab({
                         {[u.region, u.city, u.district].filter(Boolean).join(" · ") || "—"}
                       </div>
                       <div className="text-[11px] text-ink-500 dark:text-slate-400">
-                        {u.phone ?? "telefon kiritilmagan"}
+                        {u.phone ?? "телефон не указан"}
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -465,14 +465,14 @@ export function AdminAcademicTab({
                         onClick={() => void onEditUniversity(u)}
                         className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600"
                       >
-                        Tahrirlash
+                        Редактировать
                       </button>
                       <button
                         type="button"
                         onClick={() => void onDeleteUniversity(u.id)}
                         className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50"
                       >
-                        O'chirish
+                        Удалить
                       </button>
                     </div>
                   </li>
@@ -483,7 +483,7 @@ export function AdminAcademicTab({
 
           {mode !== "specialties" ? (
             <div>
-              <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Yo'nalishlar</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Направления</div>
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                 {faculties.map((f) => (
                   <li key={f.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
@@ -492,7 +492,7 @@ export function AdminAcademicTab({
                         {f.code ? `${f.code} — ` : ""}
                         {f.name}
                       </div>
-                      <div className="text-xs text-ink-500 dark:text-slate-400">{f.university_name ?? `university_id: ${f.university_id}`}</div>
+                      <div className="text-xs text-ink-500 dark:text-slate-400">{f.university_name ?? `ID университета: ${f.university_id}`}</div>
                     </div>
                     <div className="flex gap-1">
                       <button
@@ -500,14 +500,14 @@ export function AdminAcademicTab({
                         onClick={() => void onEditFaculty(f)}
                         className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600"
                       >
-                        Tahrirlash
+                        Редактировать
                       </button>
                       <button
                         type="button"
                         onClick={() => void onDeleteFaculty(f.id)}
                         className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50"
                       >
-                        O'chirish
+                        Удалить
                       </button>
                     </div>
                   </li>
@@ -518,7 +518,7 @@ export function AdminAcademicTab({
 
           {mode !== "universities" ? (
             <div className={mode === "specialties" ? "lg:col-span-3" : ""}>
-              <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Ixtisosliklar</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">Специальности</div>
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                 {filteredSpecialties.map((s) => (
                   <li key={s.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 text-sm ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600">
@@ -532,7 +532,7 @@ export function AdminAcademicTab({
                         {s.faculty_name}
                       </div>
                       <div className="text-[11px] text-ink-500 dark:text-slate-400">
-                        Kvota: {s.admission_quota ?? "—"} · Daraja: {s.degree ?? "—"} · Narx: {s.price ?? "—"}
+                        Квота: {s.admission_quota ?? "—"} · Степень: {s.degree ?? "—"} · Цена: {s.price ?? "—"}
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -541,14 +541,14 @@ export function AdminAcademicTab({
                         onClick={() => void onEditSpecialty(s)}
                         className="rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-bold text-white dark:bg-indigo-600"
                       >
-                        Tahrirlash
+                        Редактировать
                       </button>
                       <button
                         type="button"
                         onClick={() => void onDeleteSpecialty(s.id)}
                         className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200/90 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/50"
                       >
-                        O'chirish
+                        Удалить
                       </button>
                     </div>
                   </li>

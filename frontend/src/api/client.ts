@@ -1,7 +1,23 @@
 import axios from "axios";
+import { AxiosHeaders } from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
+export const ADMIN_AUTH_STORAGE_KEY = "kasbnoma_admin_key";
+
+const baseURL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
+
+export function getStoredAdminKey(): string {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(ADMIN_AUTH_STORAGE_KEY) ?? "";
+}
+
+export function setStoredAdminKey(value: string): void {
+  window.localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, value);
+}
+
+export function clearStoredAdminKey(): void {
+  window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+}
 
 export const api = axios.create({
   baseURL,
@@ -21,6 +37,15 @@ api.interceptors.request.use(
   (config) => {
     const timed = config as TimedConfig;
     timed.metadata = { startedAt: Date.now() };
+
+    if (config.url?.startsWith("/admin")) {
+      const adminKey = getStoredAdminKey();
+      if (adminKey) {
+        const headers = AxiosHeaders.from(config.headers);
+        headers.set("x-admin-key", adminKey);
+        config.headers = headers;
+      }
+    }
 
     if (shouldDebugApi) {
       console.debug("[API Request]", {

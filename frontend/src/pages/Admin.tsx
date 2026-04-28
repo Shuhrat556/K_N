@@ -3,7 +3,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { clearStoredAdminKey, getStoredAdminKey, setStoredAdminKey } from "../api/client";
 import { AdminAcademicTab } from "../components/admin/AdminAcademicTab";
+import { AdminSpecialtiesOnlyTab } from "../components/admin/AdminSpecialtiesOnlyTab";
 import {
   createAdminCluster,
   createAdminGroup,
@@ -11,9 +13,6 @@ import {
   deleteAdminCluster,
   deleteAdminGroup,
   deleteAdminQuestion,
-  fetchAcademicFaculties,
-  fetchAcademicUniversities,
-  fetchAdminAcademicSpecialties,
   fetchAdminClusters,
   fetchAdminGroups,
   fetchAdminQuestions,
@@ -76,28 +75,28 @@ const SECTION_META: Record<
   }
 > = {
   dashboard: {
-    title: "Bosh sahifa",
-    subtitle: "Kasbnoma admin panelining umumiy ko'rinishi va real statistika.",
+    title: "Панель управления",
+    subtitle: "Обзор Kasbnoma, актуальная статистика и состояние каталога.",
   },
   excel: {
-    title: "Excel yuklash",
-    subtitle: "Excel fayllarni yuklash, validatsiya qilish va katalogni yangilash.",
+    title: "Загрузка Excel",
+    subtitle: "Загрузка файлов Excel, проверка данных и обновление каталога.",
   },
   specialties: {
-    title: "Ixtisosliklar",
-    subtitle: "Ixtisosliklar ro'yxati, qidiruv va qo'lda tahrirlash.",
+    title: "Специальности",
+    subtitle: "Список специальностей, поиск и ручное редактирование записей.",
   },
   universities: {
-    title: "Muassasalar",
-    subtitle: "Universitetlar va yo'nalishlar ro'yxati, hududiy kesim va tahrirlash.",
+    title: "Учебные заведения",
+    subtitle: "Университеты, направления, регионы и инструменты редактирования.",
   },
   questions: {
-    title: "Savollar",
-    subtitle: "Test savollari, variantlar va ichki test tuzilmasini boshqarish.",
+    title: "Вопросы",
+    subtitle: "Управление вопросами теста, вариантами ответа и внутренней структурой.",
   },
   admins: {
-    title: "Adminlar",
-    subtitle: "Super admin uchun rollar, loginlar va tizim boshqaruvi bo'limi.",
+    title: "Администраторы",
+    subtitle: "Раздел для ролей, логинов и системного управления.",
   },
 };
 
@@ -106,24 +105,8 @@ const NAV_SECTIONS: Array<{
   items: Array<{ id: AdminSection; label: string; short: string }>;
 }> = [
   {
-    label: "ASOSIY",
-    items: [{ id: "dashboard", label: "Bosh sahifa", short: "BS" }],
-  },
-  {
-    label: "MA'LUMOTLAR",
-    items: [
-      { id: "excel", label: "Excel yuklash", short: "EX" },
-      { id: "specialties", label: "Ixtisosliklar", short: "IX" },
-      { id: "universities", label: "Muassasalar", short: "MU" },
-    ],
-  },
-  {
-    label: "TEST",
-    items: [{ id: "questions", label: "Savollar", short: "SV" }],
-  },
-  {
-    label: "TIZIM",
-    items: [{ id: "admins", label: "Adminlar", short: "AD" }],
+    label: "ДАННЫЕ",
+    items: [{ id: "specialties", label: "Ихтисосы", short: "ИХ" }],
   },
 ];
 
@@ -134,14 +117,17 @@ function padLabels(src: string[] | null | undefined, n: number): string[] {
 }
 
 export function Admin() {
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => Boolean(getStoredAdminKey()));
+  const [adminKeyInput, setAdminKeyInput] = useState("");
+  const [adminLoginBusy, setAdminLoginBusy] = useState(false);
   const [clusters, setClusters] = useState<AdminCluster[]>([]);
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
-  const [overviewUniversities, setOverviewUniversities] = useState<AcademicUniversity[]>([]);
-  const [overviewFaculties, setOverviewFaculties] = useState<AcademicFaculty[]>([]);
-  const [overviewSpecialties, setOverviewSpecialties] = useState<AcademicSpecialty[]>([]);
+  const [overviewUniversities] = useState<AcademicUniversity[]>([]);
+  const [overviewFaculties] = useState<AcademicFaculty[]>([]);
+  const [overviewSpecialties] = useState<AcademicSpecialty[]>([]);
   const [busy, setBusy] = useState(false);
-  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,8 +153,8 @@ export function Admin() {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
-  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [activeSection, setActiveSection] = useState<AdminSection>("specialties");
+  const [adminStats] = useState<AdminStats | null>(null);
   const [clusterModal, setClusterModal] = useState<ClusterModalState | null>(null);
   const [groupModal, setGroupModal] = useState<GroupModalState | null>(null);
   const [catalogMutating, setCatalogMutating] = useState<string | null>(null);
@@ -268,7 +254,7 @@ export function Admin() {
 
       byGroup.set(code, {
         code,
-        name: specialty.faculty_name || "Noma'lum yo'nalish",
+        name: specialty.faculty_name || "Неизвестное направление",
         specialtiesCount: 1,
         freePlaces: specialty.is_free ? parseQuota(specialty.admission_quota) : 0,
         institutionsCount: 0,
@@ -312,40 +298,48 @@ export function Admin() {
         setQuestionClusterId((prev) => prev || firstClusterId);
       }
     } catch (e) {
-      setError(isAxiosError(e) ? String(e.response?.data?.detail ?? e.message) : "Failed to load admin data");
+      setError(isAxiosError(e) ? String(e.response?.data?.detail ?? e.message) : "Не удалось загрузить данные админ-панели");
     } finally {
       setBusy(false);
     }
   };
 
-  const loadOverview = async () => {
-    setOverviewLoading(true);
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+  }, [isAdminAuthenticated]);
+
+  const onAdminLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    const key = adminKeyInput.trim();
+    if (!key) {
+      setError("Введите ключ администратора.");
+      return;
+    }
+    setAdminLoginBusy(true);
     setError(null);
+    setMessage(null);
+    setStoredAdminKey(key);
     try {
-      const [stats, universitiesData, facultiesData, specialtiesData] = await Promise.all([
-        fetchAdminStats(),
-        fetchAcademicUniversities(),
-        fetchAcademicFaculties(),
-        fetchAdminAcademicSpecialties(),
-      ]);
-      setAdminStats(stats);
-      setOverviewUniversities(universitiesData);
-      setOverviewFaculties(facultiesData);
-      setOverviewSpecialties(specialtiesData);
-    } catch (e) {
-      setError(
-        isAxiosError(e)
-          ? String(e.response?.data?.detail ?? e.message)
-          : "Admin panel statistikasini yuklashda xatolik yuz berdi",
-      );
+      await fetchAdminStats();
+      setAdminKeyInput("");
+      setIsAdminAuthenticated(true);
+      setMessage("Вход выполнен");
+    } catch (err) {
+      clearStoredAdminKey();
+      setError(isAxiosError(err) ? String(err.response?.data?.detail ?? err.message) : "Не удалось выполнить вход");
     } finally {
-      setOverviewLoading(false);
+      setAdminLoginBusy(false);
     }
   };
 
-  useEffect(() => {
-    void Promise.all([loadAll(), loadOverview()]);
-  }, []);
+  const onAdminLogout = () => {
+    clearStoredAdminKey();
+    setIsAdminAuthenticated(false);
+    setAdminKeyInput("");
+    setMessage(null);
+    setError(null);
+    setEditor(null);
+  };
 
   useEffect(() => {
     if (!groupsForSelectedCluster.some((g) => g.id === questionGroupId)) {
@@ -619,6 +613,96 @@ export function Admin() {
       ? "Порядок: 0 — да / радость, 1 — отчасти / неуверенность, 2 — нет / страх (как в стандартных подписях)."
       : "Порядок: значения шкалы 0 … 4 слева направо в форме ответа.";
 
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.22),rgba(248,250,252,0.94)_38%,rgba(241,245,249,1)_100%)] dark:bg-slate-950">
+        <div className="page-shell flex min-h-screen items-center justify-center py-10">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="relative w-full max-w-5xl overflow-hidden rounded-[2.25rem] border border-white/70 bg-white/85 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 dark:ring-slate-700"
+          >
+            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-200/70 blur-3xl dark:bg-indigo-900/30" />
+            <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-sky-200/60 blur-3xl dark:bg-sky-900/20" />
+
+            <div className="relative grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="p-8 sm:p-10 lg:p-12">
+                <div className="inline-flex rounded-full bg-indigo-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:ring-indigo-900">
+                  Kasbnoma Admin
+                </div>
+                <h1 className="mt-6 max-w-xl text-4xl font-black tracking-tight text-slate-950 dark:text-white sm:text-5xl">
+                  Вход в панель управления
+                </h1>
+                <p className="mt-4 max-w-lg text-sm font-medium leading-7 text-slate-600 dark:text-slate-300">
+                  Введите ключ администратора. После входа ключ будет использоваться только для защищённых
+                  запросов к админ API.
+                </p>
+
+                <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["Безопасно", "x-admin-key"],
+                    ["Каталог", "Excel и вузы"],
+                    ["Тест", "Вопросы и группы"],
+                  ].map(([title, text]) => (
+                    <div
+                      key={title}
+                      className="rounded-2xl bg-white/80 p-4 ring-1 ring-slate-200/80 dark:bg-slate-800/70 dark:ring-slate-700"
+                    >
+                      <div className="text-sm font-extrabold text-slate-950 dark:text-slate-50">{title}</div>
+                      <div className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200/80 bg-slate-950/[0.03] p-8 dark:border-slate-700 dark:bg-slate-950/40 sm:p-10 lg:border-l lg:border-t-0 lg:p-12">
+                <form onSubmit={onAdminLogin} className="rounded-[1.75rem] bg-white p-6 shadow-card ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-700">
+                  <div className="text-xl font-extrabold text-slate-950 dark:text-slate-50">Авторизация</div>
+                  <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Используйте значение из переменной окружения <span className="font-mono">ADMIN_API_KEY</span>.
+                  </p>
+                  <label className="mt-6 block text-xs font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Ключ администратора
+                  </label>
+                  <input
+                    className={`mt-2 ${inputClass}`}
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Введите ключ"
+                    value={adminKeyInput}
+                    onChange={(e) => setAdminKeyInput(e.target.value)}
+                    autoFocus
+                  />
+                  {error ? (
+                    <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900/60">
+                      {error}
+                    </div>
+                  ) : null}
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    className="mt-6 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-3 text-sm font-extrabold text-white shadow-soft disabled:opacity-60"
+                    disabled={adminLoginBusy}
+                    type="submit"
+                  >
+                    {adminLoginBusy ? "Проверка..." : "Войти в админ-панель"}
+                  </motion.button>
+                  <Link
+                    to="/"
+                    className="mt-3 block rounded-2xl bg-slate-50 px-5 py-3 text-center text-sm font-extrabold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                  >
+                    Вернуться на сайт
+                  </Link>
+                </form>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(226,232,240,0.95),rgba(245,242,235,0.92)_44%,rgba(248,245,239,0.98)_100%)] dark:bg-slate-950">
       <div className="page-shell py-6 lg:py-8">
@@ -634,10 +718,10 @@ export function Admin() {
                 Kasbnoma
               </div>
               <div className="mt-2 text-2xl font-extrabold tracking-tight text-stone-900 dark:text-slate-50">
-                Admin panel
+                Админ-панель
               </div>
               <p className="mt-2 text-sm font-medium leading-relaxed text-stone-600 dark:text-slate-300">
-                Excel katalog, test savollari va tizim boshqaruvi uchun ichki panel.
+                Внутренняя панель для Excel-каталога, тестовых вопросов и системного управления.
               </p>
             </div>
 
@@ -683,13 +767,13 @@ export function Admin() {
 
             <div className="mt-6 rounded-2xl bg-stone-100/85 p-4 ring-1 ring-stone-200/80 dark:bg-slate-800/80 dark:ring-slate-700">
               <div className="text-xs font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
-                Tex stack
+                Технологии
               </div>
               <div className="mt-2 text-sm font-semibold text-stone-800 dark:text-slate-100">
                 FastAPI, PostgreSQL, SQLAlchemy, React
               </div>
               <div className="mt-1 text-xs text-stone-600 dark:text-slate-400">
-                Excel import va test management bir panelga yig'ilgan.
+                Импорт Excel и управление тестами собраны в одном интерфейсе.
               </div>
             </div>
           </motion.aside>
@@ -719,21 +803,21 @@ export function Admin() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="rounded-2xl bg-stone-100/90 px-4 py-2 text-sm font-bold text-stone-700 ring-1 ring-stone-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
-                    2026-27 o'quv yili
+                    2026-27 учебный год
                   </div>
                   <ThemeToggle />
                   <Link
                     to="/"
                     className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-stone-900 ring-1 ring-stone-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
                   >
-                    Bosh sayt
+                    Основной сайт
                   </Link>
                   <button
                     type="button"
-                    onClick={() => void Promise.all([loadAll(), loadOverview()])}
-                    className="rounded-2xl bg-stone-900 px-4 py-2 text-xs font-extrabold text-white transition hover:-translate-y-0.5 hover:shadow-card dark:bg-indigo-600"
+                    onClick={onAdminLogout}
+                    className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-rose-700 ring-1 ring-rose-200/80 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:shadow-card dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/60"
                   >
-                    Yangilash
+                    Выйти
                   </button>
                 </div>
               </div>
@@ -741,7 +825,7 @@ export function Admin() {
               <div className="relative mt-5 flex flex-wrap items-center gap-2 border-t border-stone-200/80 pt-4 dark:border-slate-700/70">
                 {busy || overviewLoading ? (
                   <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-stone-700 ring-1 ring-stone-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-                    Yuklanmoqda...
+                    Загрузка...
                   </span>
                 ) : null}
                 <AnimatePresence mode="wait">
@@ -783,9 +867,9 @@ export function Admin() {
                 >
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Asosiy ko'rsatkichlar</h2>
+                      <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Ключевые показатели</h2>
                       <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-                        Import qilingan katalog va test tizimi bo'yicha real vaqt statistikasi.
+                        Статистика импортированного каталога и тестовой системы в реальном времени.
                       </p>
                     </div>
                   </div>
@@ -793,24 +877,24 @@ export function Admin() {
                   <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {[
                       {
-                        label: "Jami ixtisosliklar",
+                        label: "Всего специальностей",
                         value: overviewSpecialties.length,
-                        hint: `${dashboardRows.length} guruh kesimida`,
+                        hint: `${dashboardRows.length} групп`,
                       },
                       {
-                        label: "Muassasalar",
+                        label: "Учебные заведения",
                         value: overviewUniversities.length,
-                        hint: `${overviewFaculties.length} yo'nalish ajratilgan`,
+                        hint: `${overviewFaculties.length} направлений`,
                       },
                       {
-                        label: "Test savollari",
+                        label: "Вопросы теста",
                         value: adminStats?.total_questions ?? questions.length,
-                        hint: `Tayyorgarlik ${readinessQuestionsCount}, asosiy ${mainQuestionsCount}`,
+                        hint: `Готовность ${readinessQuestionsCount}, основной блок ${mainQuestionsCount}`,
                       },
                       {
-                        label: "Sessiyalar (bugun)",
+                        label: "Сессии за сутки",
                         value: adminStats?.results_updated_last_24h ?? 0,
-                        hint: `Faol foydalanuvchi ${adminStats?.active_users_last_24h ?? 0}`,
+                        hint: `Активных пользователей ${adminStats?.active_users_last_24h ?? 0}`,
                       },
                     ].map((item) => (
                       <div
@@ -836,16 +920,16 @@ export function Admin() {
                     transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className={sectionCardClass}
                   >
-                    <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Guruhlar bo'yicha ixtisosliklar</h2>
+                    <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Специальности по группам</h2>
                     <div className="mt-4 overflow-x-auto">
                       <table className="w-full min-w-[620px] text-left">
                         <thead>
                           <tr className="border-b border-stone-200 text-[11px] font-black uppercase tracking-[0.14em] text-stone-500 dark:border-slate-700 dark:text-slate-400">
-                            <th className="px-4 py-3">Guruh</th>
-                            <th className="px-4 py-3">Yo'nalish nomi</th>
-                            <th className="px-4 py-3">Ixtisosliklar</th>
-                            <th className="px-4 py-3">Bepul o'rinlar</th>
-                            <th className="px-4 py-3">Muassasalar</th>
+                            <th className="px-4 py-3">Группа</th>
+                            <th className="px-4 py-3">Направление</th>
+                            <th className="px-4 py-3">Специальности</th>
+                            <th className="px-4 py-3">Бюджетные места</th>
+                            <th className="px-4 py-3">Заведения</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -868,7 +952,7 @@ export function Admin() {
                           {!dashboardRows.length ? (
                             <tr>
                               <td colSpan={5} className="px-4 py-10 text-center text-sm font-medium text-stone-500 dark:text-slate-400">
-                                Hali import qilingan ma'lumot topilmadi.
+                                Импортированные данные пока не найдены.
                               </td>
                             </tr>
                           ) : null}
@@ -883,7 +967,7 @@ export function Admin() {
                     transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className={sectionCardClass}
                   >
-                    <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Sessiyalar holati</h2>
+                    <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Статусы сессий</h2>
                     <ul className="mt-4 space-y-2">
                       {Object.entries(adminStats?.results_by_status ?? {})
                         .sort((a, b) => b[1] - a[1])
@@ -901,21 +985,21 @@ export function Admin() {
                     <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                       <div className="rounded-2xl bg-stone-50/90 p-4 ring-1 ring-stone-200/70 dark:bg-slate-800/80 dark:ring-slate-700">
                         <div className="text-[11px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
-                          Yangi foydalanuvchilar
+                          Новые пользователи
                         </div>
                         <div className="mt-2 text-2xl font-extrabold text-stone-950 dark:text-slate-50">
                           {(adminStats?.users_created_last_7_days ?? 0).toLocaleString()}
                         </div>
-                        <div className="mt-1 text-xs font-medium text-stone-500 dark:text-slate-400">Oxirgi 7 kun</div>
+                        <div className="mt-1 text-xs font-medium text-stone-500 dark:text-slate-400">За последние 7 дней</div>
                       </div>
                       <div className="rounded-2xl bg-stone-50/90 p-4 ring-1 ring-stone-200/70 dark:bg-slate-800/80 dark:ring-slate-700">
                         <div className="text-[11px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
-                          Saqlangan javoblar
+                          Сохранённые ответы
                         </div>
                         <div className="mt-2 text-2xl font-extrabold text-stone-950 dark:text-slate-50">
                           {(adminStats?.total_answers ?? 0).toLocaleString()}
                         </div>
-                        <div className="mt-1 text-xs font-medium text-stone-500 dark:text-slate-400">Barcha sessiyalar bo'yicha</div>
+                        <div className="mt-1 text-xs font-medium text-stone-500 dark:text-slate-400">По всем сессиям</div>
                       </div>
                     </div>
                   </motion.div>
@@ -928,19 +1012,13 @@ export function Admin() {
                 inputClass={inputClass}
                 sectionCardClass={sectionCardClass}
                 mode="import"
-                title="Excel yuklash"
-                description="Excel faylni yuklang, kerak bo'lsa eski katalogni tozalang va yangi yozuvlarni bazaga import qiling."
+                title="Загрузка Excel"
+                description="Загрузите Excel-файл, при необходимости очистите старый каталог и импортируйте новые записи."
               />
             )}
 
             {activeSection === "specialties" && (
-              <AdminAcademicTab
-                inputClass={inputClass}
-                sectionCardClass={sectionCardClass}
-                mode="specialties"
-                title="Ixtisosliklar"
-                description="Ixtisosliklar ro'yxati, qidirish, qo'lda qo'shish va tahrirlash bo'limi."
-              />
+              <AdminSpecialtiesOnlyTab inputClass={inputClass} sectionCardClass={sectionCardClass} />
             )}
 
             {activeSection === "universities" && (
@@ -948,8 +1026,8 @@ export function Admin() {
                 inputClass={inputClass}
                 sectionCardClass={sectionCardClass}
                 mode="universities"
-                title="Muassasalar"
-                description="Universitetlar va yo'nalishlar bo'yicha katalog, hududiy ma'lumotlar va tahrirlash."
+                title="Учебные заведения"
+                description="Каталог университетов и направлений, региональные данные и редактирование."
               />
             )}
 
@@ -962,22 +1040,22 @@ export function Admin() {
                   className="mt-6 rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80"
                   onSubmit={onCreateQuestion}
                 >
-                  <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Savol qo'shish</h2>
+                  <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить вопрос</h2>
                   <select className={`mt-4 ${inputClass}`} value={questionPhase} onChange={(e) => setQuestionPhase(e.target.value as QuestionPhase)}>
-                    <option value="readiness">Tayyorgarlik bloki</option>
-                    <option value="main">Asosiy blok</option>
+                    <option value="readiness">Блок готовности</option>
+                    <option value="main">Основной блок</option>
                   </select>
 
                   <textarea
                     className={`mt-3 min-h-28 ${inputClass}`}
-                    placeholder="Savol matni"
+                    placeholder="Текст вопроса"
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}
                     required
                   />
                   <textarea
                     className={`mt-3 min-h-20 ${inputClass}`}
-                    placeholder="Ikkinchi tildagi matn (ixtiyoriy)"
+                    placeholder="Текст на втором языке (необязательно)"
                     value={questionTextAlt}
                     onChange={(e) => setQuestionTextAlt(e.target.value)}
                   />
@@ -993,9 +1071,9 @@ export function Admin() {
                         value={questionReadinessKind}
                         onChange={(e) => setQuestionReadinessKind(e.target.value as ReadinessKind)}
                       >
-                        <option value="positive">Pozitiv</option>
-                        <option value="negative">Negativ</option>
-                        <option value="emotional">Emotsional</option>
+                        <option value="positive">Позитивный</option>
+                        <option value="negative">Негативный</option>
+                        <option value="emotional">Эмоциональный</option>
                       </motion.select>
                     ) : (
                       <motion.div
@@ -1012,7 +1090,7 @@ export function Admin() {
                           required
                         >
                           <option value="" disabled>
-                            Kategoriya tanlang
+                            Выберите категорию
                           </option>
                           {clusters.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -1027,7 +1105,7 @@ export function Admin() {
                           required
                         >
                           <option value="" disabled>
-                            Guruh tanlang
+                            Выберите группу
                           </option>
                           {groupsForSelectedCluster.map((g) => (
                             <option key={g.id} value={g.id}>
@@ -1042,7 +1120,7 @@ export function Admin() {
                   <input
                     className={`mt-3 ${inputClass}`}
                     type="number"
-                    placeholder="Sort order"
+                    placeholder="Сортировка"
                     value={questionSort}
                     onChange={(e) => setQuestionSort(Number(e.target.value))}
                   />
@@ -1053,7 +1131,7 @@ export function Admin() {
                     className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
                     type="submit"
                   >
-                    Savolni saqlash
+                    Сохранить вопрос
                   </motion.button>
                 </motion.form>
 
@@ -1065,9 +1143,9 @@ export function Admin() {
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                     <div>
-                      <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Savollar ro'yxati</h2>
+                      <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Список вопросов</h2>
                       <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-                        Qidiruv, faza, kategoriya va guruh bo'yicha filterlash. Asosiy blok uchun cluster/group filtrlari ishlaydi.
+                        Поиск и фильтрация по этапу, категории и группе. Фильтры категории и группы применяются к основному блоку.
                       </p>
                     </div>
                     <div className="flex max-w-full flex-col gap-2 sm:max-w-2xl sm:flex-row sm:flex-wrap sm:items-end">
@@ -1076,9 +1154,9 @@ export function Admin() {
                         value={listPhase}
                         onChange={(e) => setListPhase(e.target.value as typeof listPhase)}
                       >
-                        <option value="all">Barcha fazalar</option>
-                        <option value="readiness">Tayyorgarlik</option>
-                        <option value="main">Asosiy blok</option>
+                        <option value="all">Все этапы</option>
+                        <option value="readiness">Готовность</option>
+                        <option value="main">Основной блок</option>
                       </select>
                       <select
                         className={inputClass + " min-w-[10rem] flex-1"}
@@ -1089,7 +1167,7 @@ export function Admin() {
                         }}
                         aria-label="Filter cluster"
                       >
-                        <option value="">Barcha kategoriyalar</option>
+                        <option value="">Все категории</option>
                         {clusters.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
@@ -1106,7 +1184,7 @@ export function Admin() {
                         disabled={filterClusterId !== "all" && !groupsForQuestionFilter.length}
                         aria-label="Filter group"
                       >
-                        <option value="">Barcha guruhlar</option>
+                        <option value="">Все группы</option>
                         {(filterClusterId === "all" ? groups : groupsForQuestionFilter).map((g) => (
                           <option key={g.id} value={g.id}>
                             {g.name} ({g.code})
@@ -1115,7 +1193,7 @@ export function Admin() {
                       </select>
                       <input
                         className={inputClass + " min-w-[12rem] flex-1"}
-                        placeholder="Matn yoki id bo'yicha qidirish"
+                        placeholder="Поиск по тексту или ID"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                       />
@@ -1146,10 +1224,10 @@ export function Admin() {
                                   {q.group_id != null ? groupById.get(q.group_id)?.name ?? `группа ${q.group_id}` : "—"}
                                 </>
                               ) : (
-                                <>cluster / group ulanmagan</>
+                                <>кластер / группа не привязаны</>
                               )}{" "}
-                              · sort {q.sort_order}
-                              {q.option_labels?.length ? ` · variantlar: ${q.option_labels.length}` : ""}
+                              · сортировка {q.sort_order}
+                              {q.option_labels?.length ? ` · вариантов: ${q.option_labels.length}` : ""}
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:justify-center">
@@ -1158,7 +1236,7 @@ export function Admin() {
                               onClick={() => openEditor(q)}
                               className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white shadow-card transition hover:brightness-110 dark:bg-indigo-600"
                             >
-                              Tahrirlash
+                              Редактировать
                             </button>
                             <button
                               type="button"
@@ -1166,14 +1244,14 @@ export function Admin() {
                               onClick={() => void onDeleteQuestion(q)}
                               className="rounded-xl bg-white px-4 py-2 text-xs font-extrabold text-rose-700 ring-1 ring-rose-200/90 transition hover:bg-rose-50 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/60 dark:hover:bg-rose-950/40"
                             >
-                              {deletingId === q.id ? "O'chirilmoqda..." : "O'chirish"}
+                              {deletingId === q.id ? "Удаление..." : "Удалить"}
                             </button>
                           </div>
                         </motion.div>
                       ))}
                     </AnimatePresence>
                     {!filteredQuestions.length ? (
-                      <div className="py-8 text-center text-sm font-medium text-ink-500 dark:text-slate-400">Hech narsa topilmadi.</div>
+                      <div className="py-8 text-center text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
                     ) : null}
                   </div>
                 </motion.div>
@@ -1184,18 +1262,18 @@ export function Admin() {
                   transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                   className={`mt-6 ${sectionCardClass}`}
                 >
-                  <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Test tuzilmasi</h2>
+                  <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Структура теста</h2>
                   <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-                    Kategoriyalar va guruhlar katalogi. Savollar aynan shu ichki tuzilmaga ulanadi.
+                    Каталог категорий и групп. Вопросы привязываются к этой внутренней структуре.
                   </p>
                   <div className="mt-4 grid gap-6 lg:grid-cols-2">
                     <div>
                       <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
-                        Kategoriyalar
+                        Категории
                       </label>
                       <input
                         className={`mt-2 ${inputClass}`}
-                        placeholder="Kategoriya qidirish..."
+                        placeholder="Поиск категории..."
                         value={catalogSearch}
                         onChange={(e) => setCatalogSearch(e.target.value)}
                         aria-label="Cluster search"
@@ -1208,7 +1286,7 @@ export function Admin() {
                           >
                             <div className="min-w-0">
                               <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{c.code}</span> · {c.name}{" "}
-                              <span className="text-ink-500 dark:text-slate-400">sort {c.sort_order}</span>
+                              <span className="text-ink-500 dark:text-slate-400">сортировка {c.sort_order}</span>
                             </div>
                             <div className="flex shrink-0 flex-wrap gap-2">
                               <button
@@ -1223,7 +1301,7 @@ export function Admin() {
                                 }
                                 className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
                               >
-                                Tahrirlash
+                                Редактировать
                               </button>
                               <button
                                 type="button"
@@ -1231,19 +1309,19 @@ export function Admin() {
                                 onClick={() => void onDeleteCluster(c)}
                                 className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
                               >
-                                O'chirish
+                                Удалить
                               </button>
                             </div>
                           </li>
                         ))}
                       </ul>
                       {!filteredCatalogClusters.length ? (
-                        <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ma'lumot topilmadi.</div>
+                        <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Данные не найдены.</div>
                       ) : null}
                     </div>
                     <div>
                       <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
-                        Guruhlar
+                        Группы
                       </label>
                       <select
                         className={`mt-2 ${inputClass}`}
@@ -1254,7 +1332,7 @@ export function Admin() {
                         }}
                         aria-label="Group filter by cluster"
                       >
-                        <option value="">Barcha kategoriyalar</option>
+                        <option value="">Все категории</option>
                         {clusters.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name} ({c.code})
@@ -1263,7 +1341,7 @@ export function Admin() {
                       </select>
                       <input
                         className={`mt-2 ${inputClass}`}
-                        placeholder="Guruh qidirish..."
+                        placeholder="Поиск группы..."
                         value={groupCatalogSearch}
                         onChange={(e) => setGroupCatalogSearch(e.target.value)}
                         aria-label="Group search"
@@ -1279,7 +1357,7 @@ export function Admin() {
                               <div className="min-w-0">
                                 <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{g.code}</span> · {g.name}{" "}
                                 <span className="text-ink-500 dark:text-slate-400">
-                                  {c ? c.name : `cluster ${g.cluster_id}`}
+                                  {c ? c.name : `кластер ${g.cluster_id}`}
                                 </span>
                               </div>
                               <div className="flex shrink-0 flex-wrap gap-2">
@@ -1296,7 +1374,7 @@ export function Admin() {
                                   }
                                   className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
                                 >
-                                  Tahrirlash
+                                  Редактировать
                                 </button>
                                 <button
                                   type="button"
@@ -1304,7 +1382,7 @@ export function Admin() {
                                   onClick={() => void onDeleteGroup(g)}
                                   className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
                                 >
-                                  O'chirish
+                                  Удалить
                                 </button>
                               </div>
                             </li>
@@ -1312,7 +1390,7 @@ export function Admin() {
                         })}
                       </ul>
                       {!filteredCatalogGroups.length ? (
-                        <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ma'lumot topilmadi.</div>
+                        <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Данные не найдены.</div>
                       ) : null}
                     </div>
                   </div>
@@ -1325,18 +1403,18 @@ export function Admin() {
                   className="mt-6 grid gap-6 lg:grid-cols-2"
                 >
                   <form className={sectionCardClass} onSubmit={onCreateCluster}>
-                    <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Kategoriya qo'shish</h2>
+                    <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить категорию</h2>
                     <div className="mt-4 space-y-3">
                       <input
                         className={inputClass}
-                        placeholder="Kod"
+                        placeholder="Код"
                         value={clusterCode}
                         onChange={(e) => setClusterCode(e.target.value)}
                         required
                       />
                       <input
                         className={inputClass}
-                        placeholder="Nomi"
+                        placeholder="Название"
                         value={clusterName}
                         onChange={(e) => setClusterName(e.target.value)}
                         required
@@ -1344,7 +1422,7 @@ export function Admin() {
                       <input
                         className={inputClass}
                         type="number"
-                        placeholder="Sort order"
+                        placeholder="Сортировка"
                         value={clusterSort}
                         onChange={(e) => setClusterSort(Number(e.target.value))}
                       />
@@ -1355,12 +1433,12 @@ export function Admin() {
                       className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
                       type="submit"
                     >
-                      Kategoriyani saqlash
+                      Сохранить категорию
                     </motion.button>
                   </form>
 
                   <form className={sectionCardClass} onSubmit={onCreateGroup}>
-                    <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Guruh qo'shish</h2>
+                    <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить группу</h2>
                     <div className="mt-4 space-y-3">
                       <select
                         className={inputClass}
@@ -1369,7 +1447,7 @@ export function Admin() {
                         required
                       >
                         <option value="" disabled>
-                          Kategoriya tanlang
+                          Выберите категорию
                         </option>
                         {clusters.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -1379,14 +1457,14 @@ export function Admin() {
                       </select>
                       <input
                         className={inputClass}
-                        placeholder="Guruh kodi"
+                        placeholder="Код группы"
                         value={groupCode}
                         onChange={(e) => setGroupCode(e.target.value)}
                         required
                       />
                       <input
                         className={inputClass}
-                        placeholder="Guruh nomi"
+                        placeholder="Название группы"
                         value={groupName}
                         onChange={(e) => setGroupName(e.target.value)}
                         required
@@ -1394,7 +1472,7 @@ export function Admin() {
                       <input
                         className={inputClass}
                         type="number"
-                        placeholder="Sort order"
+                        placeholder="Сортировка"
                         value={groupSort}
                         onChange={(e) => setGroupSort(Number(e.target.value))}
                       />
@@ -1405,7 +1483,7 @@ export function Admin() {
                       className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
                       type="submit"
                     >
-                      Guruhni saqlash
+                      Сохранить группу
                     </motion.button>
                   </form>
                 </motion.div>
@@ -1420,11 +1498,10 @@ export function Admin() {
                   transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                   className={`mt-6 ${sectionCardClass}`}
                 >
-                  <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Super admin bo'limi</h2>
+                  <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Раздел супер-администратора</h2>
                   <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-ink-600 dark:text-slate-300">
-                    Frontend struktura tayyor. Lekin repo ichida hali admin user modeli, JWT auth, audit log va
-                    `/admin/admins` CRUD endpointlari mavjud emas. Shu sabab bu bo'lim hozircha tayyor skelet va
-                    texnik checklist bilan ko'rsatilmoqda.
+                    Базовый вход уже подключён через ключ администратора. Для полноценного управления пользователями
+                    ещё нужны модель администраторов, JWT-сессии, audit log и CRUD endpoint'ы `/admin/admins`.
                   </p>
                 </motion.div>
 
@@ -1435,14 +1512,14 @@ export function Admin() {
                     transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className={sectionCardClass}
                   >
-                    <h3 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Kerakli backend qismlar</h3>
+                    <h3 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Нужные backend-части</h3>
                     <div className="mt-4 space-y-2">
                       {[
-                        "admins jadvali va password_hash",
-                        "JWT login/logout va /auth/me",
-                        "super_admin va admin rollari",
-                        "audit_logs va CRUD action tracking",
-                        "soft delete va restore flow",
+                        "таблица admins и password_hash",
+                        "JWT login/logout и /auth/me",
+                        "роли super_admin и admin",
+                        "audit_logs и отслеживание CRUD-действий",
+                        "soft delete и восстановление",
                       ].map((item) => (
                         <div
                           key={item}
@@ -1460,23 +1537,23 @@ export function Admin() {
                     transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className={sectionCardClass}
                   >
-                    <h3 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">UI struktura</h3>
+                    <h3 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Структура UI</h3>
                     <div className="mt-4 overflow-hidden rounded-2xl ring-1 ring-stone-200/80 dark:ring-slate-700">
                       <table className="w-full text-left text-sm">
                         <thead className="bg-stone-50 text-[11px] font-black uppercase tracking-[0.14em] text-stone-500 dark:bg-slate-800 dark:text-slate-400">
                           <tr>
-                            <th className="px-4 py-3">Maydon</th>
-                            <th className="px-4 py-3">Holat</th>
+                            <th className="px-4 py-3">Поле</th>
+                            <th className="px-4 py-3">Статус</th>
                           </tr>
                         </thead>
                         <tbody>
                           {[
-                            ["ID", "tayyor"],
-                            ["Ism", "tayyor"],
-                            ["Login yoki email", "tayyor"],
-                            ["Rol", "tayyor"],
-                            ["Status", "tayyor"],
-                            ["Parol yangilash", "backend kerak"],
+                            ["ID", "готово"],
+                            ["Имя", "готово"],
+                            ["Логин или email", "готово"],
+                            ["Роль", "готово"],
+                            ["Статус", "готово"],
+                            ["Смена пароля", "нужен backend"],
                           ].map(([field, status]) => (
                             <tr key={field} className="border-t border-stone-100 dark:border-slate-800">
                               <td className="px-4 py-3 font-semibold text-stone-800 dark:text-slate-200">{field}</td>

@@ -113,6 +113,14 @@ class SpecialtyListOut(SpecialtyOut):
     phone: Optional[str] = None
 
 
+class SpecialtyPageOut(BaseModel):
+    data: list[SpecialtyListOut]
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+
+
 class AcademicImportOut(BaseModel):
     sheets_read: int
     rows_seen: int
