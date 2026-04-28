@@ -4,7 +4,6 @@ import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { AdminAcademicTab } from "../components/admin/AdminAcademicTab";
-import { AdminSpecialtiesTab } from "../components/admin/AdminSpecialtiesTab";
 import {
   createAdminCluster,
   createAdminGroup,
@@ -12,6 +11,9 @@ import {
   deleteAdminCluster,
   deleteAdminGroup,
   deleteAdminQuestion,
+  fetchAcademicFaculties,
+  fetchAcademicUniversities,
+  fetchAdminAcademicSpecialties,
   fetchAdminClusters,
   fetchAdminGroups,
   fetchAdminQuestions,
@@ -25,6 +27,9 @@ import type {
   AdminGroup,
   AdminQuestion,
   AdminStats,
+  AcademicFaculty,
+  AcademicSpecialty,
+  AcademicUniversity,
   QuestionPhase,
   ReadinessKind,
 } from "../api/types";
@@ -53,6 +58,75 @@ type EditorState = {
   labels_tj: string[];
 };
 
+type AdminSection = "dashboard" | "excel" | "specialties" | "universities" | "questions" | "admins";
+
+type DashboardGroupRow = {
+  code: string;
+  name: string;
+  specialtiesCount: number;
+  freePlaces: number;
+  institutionsCount: number;
+};
+
+const SECTION_META: Record<
+  AdminSection,
+  {
+    title: string;
+    subtitle: string;
+  }
+> = {
+  dashboard: {
+    title: "Bosh sahifa",
+    subtitle: "Kasbnoma admin panelining umumiy ko'rinishi va real statistika.",
+  },
+  excel: {
+    title: "Excel yuklash",
+    subtitle: "Excel fayllarni yuklash, validatsiya qilish va katalogni yangilash.",
+  },
+  specialties: {
+    title: "Ixtisosliklar",
+    subtitle: "Ixtisosliklar ro'yxati, qidiruv va qo'lda tahrirlash.",
+  },
+  universities: {
+    title: "Muassasalar",
+    subtitle: "Universitetlar va yo'nalishlar ro'yxati, hududiy kesim va tahrirlash.",
+  },
+  questions: {
+    title: "Savollar",
+    subtitle: "Test savollari, variantlar va ichki test tuzilmasini boshqarish.",
+  },
+  admins: {
+    title: "Adminlar",
+    subtitle: "Super admin uchun rollar, loginlar va tizim boshqaruvi bo'limi.",
+  },
+};
+
+const NAV_SECTIONS: Array<{
+  label: string;
+  items: Array<{ id: AdminSection; label: string; short: string }>;
+}> = [
+  {
+    label: "ASOSIY",
+    items: [{ id: "dashboard", label: "Bosh sahifa", short: "BS" }],
+  },
+  {
+    label: "MA'LUMOTLAR",
+    items: [
+      { id: "excel", label: "Excel yuklash", short: "EX" },
+      { id: "specialties", label: "Ixtisosliklar", short: "IX" },
+      { id: "universities", label: "Muassasalar", short: "MU" },
+    ],
+  },
+  {
+    label: "TEST",
+    items: [{ id: "questions", label: "Savollar", short: "SV" }],
+  },
+  {
+    label: "TIZIM",
+    items: [{ id: "admins", label: "Adminlar", short: "AD" }],
+  },
+];
+
 function padLabels(src: string[] | null | undefined, n: number): string[] {
   const a = [...(src ?? [])].slice(0, n);
   while (a.length < n) a.push("");
@@ -63,7 +137,11 @@ export function Admin() {
   const [clusters, setClusters] = useState<AdminCluster[]>([]);
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
+  const [overviewUniversities, setOverviewUniversities] = useState<AcademicUniversity[]>([]);
+  const [overviewFaculties, setOverviewFaculties] = useState<AcademicFaculty[]>([]);
+  const [overviewSpecialties, setOverviewSpecialties] = useState<AcademicSpecialty[]>([]);
   const [busy, setBusy] = useState(false);
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,9 +167,8 @@ export function Admin() {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"structure" | "questions" | "specialties" | "stats" | "academic">("structure");
+  const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
   const [clusterModal, setClusterModal] = useState<ClusterModalState | null>(null);
   const [groupModal, setGroupModal] = useState<GroupModalState | null>(null);
   const [catalogMutating, setCatalogMutating] = useState<string | null>(null);
@@ -105,6 +182,13 @@ export function Admin() {
     "w-full rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-medium text-ink-900 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-950/60";
   const sectionCardClass =
     "rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80";
+  const selectedSectionMeta = SECTION_META[activeSection];
+
+  const parseQuota = (raw?: string | null) => {
+    if (!raw) return 0;
+    const match = raw.match(/\d+/);
+    return match ? Number(match[0]) : 0;
+  };
 
   const groupsForSelectedCluster = useMemo(
     () => groups.filter((g) => g.cluster_id === questionClusterId),
@@ -169,6 +253,47 @@ export function Admin() {
     });
   }, [questions, listPhase, search, filterClusterId, filterGroupId]);
 
+  const dashboardRows = useMemo<DashboardGroupRow[]>(() => {
+    const byGroup = new Map<string, DashboardGroupRow & { universityIds: Set<number> }>();
+
+    for (const specialty of overviewSpecialties) {
+      const code = (specialty.source_sheet || specialty.faculty_code || "N/A").trim();
+      const existing = byGroup.get(code);
+      if (existing) {
+        existing.specialtiesCount += 1;
+        if (specialty.is_free) existing.freePlaces += parseQuota(specialty.admission_quota);
+        existing.universityIds.add(specialty.university_id);
+        continue;
+      }
+
+      byGroup.set(code, {
+        code,
+        name: specialty.faculty_name || "Noma'lum yo'nalish",
+        specialtiesCount: 1,
+        freePlaces: specialty.is_free ? parseQuota(specialty.admission_quota) : 0,
+        institutionsCount: 0,
+        universityIds: new Set([specialty.university_id]),
+      });
+    }
+
+    return Array.from(byGroup.values())
+      .map(({ universityIds, ...row }) => ({
+        ...row,
+        institutionsCount: universityIds.size,
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+  }, [overviewSpecialties]);
+
+  const readinessQuestionsCount = useMemo(
+    () => questions.filter((question) => question.phase === "readiness").length,
+    [questions],
+  );
+
+  const mainQuestionsCount = useMemo(
+    () => questions.filter((question) => question.phase === "main").length,
+    [questions],
+  );
+
   const loadAll = async () => {
     setBusy(true);
     setError(null);
@@ -193,31 +318,34 @@ export function Admin() {
     }
   };
 
-  useEffect(() => {
-    void loadAll();
-  }, []);
+  const loadOverview = async () => {
+    setOverviewLoading(true);
+    setError(null);
+    try {
+      const [stats, universitiesData, facultiesData, specialtiesData] = await Promise.all([
+        fetchAdminStats(),
+        fetchAcademicUniversities(),
+        fetchAcademicFaculties(),
+        fetchAdminAcademicSpecialties(),
+      ]);
+      setAdminStats(stats);
+      setOverviewUniversities(universitiesData);
+      setOverviewFaculties(facultiesData);
+      setOverviewSpecialties(specialtiesData);
+    } catch (e) {
+      setError(
+        isAxiosError(e)
+          ? String(e.response?.data?.detail ?? e.message)
+          : "Admin panel statistikasini yuklashda xatolik yuz berdi",
+      );
+    } finally {
+      setOverviewLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (activeTab !== "stats") return;
-    let cancelled = false;
-    void (async () => {
-      setStatsLoading(true);
-      setError(null);
-      try {
-        const s = await fetchAdminStats();
-        if (!cancelled) setAdminStats(s);
-      } catch (e) {
-        if (!cancelled) {
-          setError(isAxiosError(e) ? String(e.response?.data?.detail ?? e.message) : "Не удалось загрузить статистику");
-        }
-      } finally {
-        if (!cancelled) setStatsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab]);
+    void Promise.all([loadAll(), loadOverview()]);
+  }, []);
 
   useEffect(() => {
     if (!groupsForSelectedCluster.some((g) => g.id === questionGroupId)) {
@@ -492,659 +620,883 @@ export function Admin() {
       : "Порядок: значения шкалы 0 … 4 слева направо в форме ответа.";
 
   return (
-    <div className="page-shell py-8">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80"
-      >
-        <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-indigo-300/30 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-sky-300/30 blur-2xl" />
-
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-indigo-700/80 dark:text-indigo-300/90">Kasbnamo</div>
-            <div className="mt-1 text-2xl font-extrabold text-ink-900 dark:text-slate-50">Админ-панель</div>
-            <p className="mt-2 text-sm font-medium text-ink-700 dark:text-slate-300">
-              Откройте по адресу <span className="font-mono text-ink-900 dark:text-slate-100">/admin</span>. Категории, подкатегории, вопросы
-              и подписи вариантов.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ThemeToggle />
-            <Link
-              to="/"
-              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-indigo-800 ring-1 ring-indigo-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-indigo-950/50 dark:text-indigo-100 dark:ring-indigo-800/60"
-            >
-              На главную
-            </Link>
-            <button
-              type="button"
-              onClick={() => void loadAll()}
-              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-ink-900 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
-            >
-              Обновить
-            </button>
-          </div>
-        </div>
-
-        <div className="relative mt-4 flex flex-wrap items-center gap-2">
-          {busy ? (
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-ink-700 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600">
-              Загрузка...
-            </span>
-          ) : null}
-          <AnimatePresence mode="wait">
-            {message ? (
-              <motion.span
-                key={`m-${message}`}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/50"
-              >
-                {message}
-              </motion.span>
-            ) : null}
-          </AnimatePresence>
-          <AnimatePresence mode="wait">
-            {error ? (
-              <motion.span
-                key={`e-${error}`}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-900/50"
-              >
-                {error}
-              </motion.span>
-            ) : null}
-          </AnimatePresence>
-        </div>
-
-        <div className="relative mt-6 flex flex-wrap gap-2 border-t border-slate-200/70 pt-5 dark:border-slate-700/60">
-          {(
-            [
-              { id: "structure" as const, label: "Кластеры и группы" },
-              { id: "questions" as const, label: "Вопросы" },
-              { id: "specialties" as const, label: "Ихтисосҳо (Excel)" },
-              { id: "academic" as const, label: "Университеты / факультеты / специальности" },
-              { id: "stats" as const, label: "Статистика" },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              className={
-                activeTab === t.id
-                  ? "rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-soft"
-                  : "rounded-2xl bg-white/90 px-4 py-2.5 text-xs font-extrabold text-ink-800 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
-              }
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </motion.div>
-
-      {activeTab === "stats" && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className={`mt-6 ${sectionCardClass}`}
-        >
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Статистика платформы</h2>
-              <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-                Пользователи, сессии теста и активность за последние сутки (по обновлению сессии).
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(226,232,240,0.95),rgba(245,242,235,0.92)_44%,rgba(248,245,239,0.98)_100%)] dark:bg-slate-950">
+      <div className="page-shell py-6 lg:py-8">
+        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+          <motion.aside
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-[2rem] border border-stone-200/80 bg-white/85 p-5 shadow-soft ring-1 ring-white/60 backdrop-blur dark:border-slate-700 dark:bg-slate-900/92 dark:ring-slate-700/60 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:overflow-y-auto"
+          >
+            <div className="border-b border-stone-200/80 pb-5 dark:border-slate-700/70">
+              <div className="text-[11px] font-black uppercase tracking-[0.24em] text-stone-500 dark:text-slate-400">
+                Kasbnoma
+              </div>
+              <div className="mt-2 text-2xl font-extrabold tracking-tight text-stone-900 dark:text-slate-50">
+                Admin panel
+              </div>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-stone-600 dark:text-slate-300">
+                Excel katalog, test savollari va tizim boshqaruvi uchun ichki panel.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                void (async () => {
-                  setStatsLoading(true);
-                  setError(null);
-                  try {
-                    setAdminStats(await fetchAdminStats());
-                  } catch (e) {
-                    setError(
-                      isAxiosError(e) ? String(e.response?.data?.detail ?? e.message) : "Не удалось обновить",
-                    );
-                  } finally {
-                    setStatsLoading(false);
-                  }
-                })();
-              }}
-              className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-ink-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
-            >
-              Обновить цифры
-            </button>
-          </div>
 
-          {statsLoading && !adminStats ? (
-            <div className="mt-6 text-sm font-medium text-ink-500 dark:text-slate-400">Загрузка…</div>
-          ) : adminStats ? (
-            <>
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {(
-                  [
-                    ["Всего пользователей", String(adminStats.total_users)],
-                    ["Сессий теста (всего)", String(adminStats.total_results)],
-                    ["Завершённых тестов", String(adminStats.completed_results)],
-                    ["Активных за 24 ч (уник. пользователи)", String(adminStats.active_users_last_24h)],
-                    ["Сессий с активностью за 24 ч", String(adminStats.results_updated_last_24h)],
-                    ["Новых пользователей за 7 дней", String(adminStats.users_created_last_7_days)],
-                    ["Вопросов в банке", String(adminStats.total_questions)],
-                    ["Ответов сохранено", String(adminStats.total_answers)],
-                  ] as const
-                ).map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-4 ring-1 ring-slate-200/70 dark:from-slate-800/80 dark:to-slate-900/90 dark:ring-slate-600"
-                  >
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
-                      {label}
-                    </div>
-                    <div className="mt-1 text-2xl font-extrabold tabular-nums text-ink-900 dark:text-slate-50">{value}</div>
+            <nav className="mt-5 space-y-5">
+              {NAV_SECTIONS.map((section) => (
+                <div key={section.label}>
+                  <div className="px-2 text-xs font-black uppercase tracking-[0.18em] text-stone-400 dark:text-slate-500">
+                    {section.label}
                   </div>
-                ))}
-              </div>
-              <div className="mt-6">
-                <div className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
-                  Сессии по статусу
-                </div>
-                <ul className="mt-2 space-y-1 text-sm font-medium text-ink-800 dark:text-slate-200">
-                  {Object.entries(adminStats.results_by_status)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([status, count]) => (
-                      <li
-                        key={status}
-                        className="flex justify-between gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600"
-                      >
-                        <span>{RESULT_STATUS_LABELS[status] ?? status}</span>
-                        <span className="tabular-nums text-ink-500 dark:text-slate-400">{count}</span>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            </>
-          ) : (
-            <div className="mt-6 text-sm text-ink-500 dark:text-slate-400">Нет данных.</div>
-          )}
-        </motion.div>
-      )}
-
-      {activeTab === "structure" && (
-        <>
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className={`mt-6 ${sectionCardClass}`}
-          >
-            <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Каталог кластеров и групп</h2>
-            <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-              Поиск по коду и названию. Ниже — формы для добавления нового кластера и специализации (группы).
-            </p>
-            <div className="mt-4 grid gap-6 lg:grid-cols-2">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
-                  Кластеры
-                </label>
-                <input
-                  className={`mt-2 ${inputClass}`}
-                  placeholder="Поиск кластера…"
-                  value={catalogSearch}
-                  onChange={(e) => setCatalogSearch(e.target.value)}
-                  aria-label="Поиск кластера"
-                />
-                <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
-                  {filteredCatalogClusters.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex flex-col gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{c.code}</span> · {c.name}{" "}
-                        <span className="text-ink-500 dark:text-slate-400">sort {c.sort_order}</span>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2">
+                  <div className="mt-2 space-y-1.5">
+                    {section.items.map((item) => {
+                      const active = activeSection === item.id;
+                      return (
                         <button
+                          key={item.id}
                           type="button"
-                          onClick={() =>
-                            setClusterModal({
-                              id: c.id,
-                              code: c.code,
-                              name: c.name,
-                              sort_order: c.sort_order,
-                            })
-                          }
-                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
+                          onClick={() => setActiveSection(item.id)}
+                          className={[
+                            "flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
+                            active
+                              ? "bg-stone-100 text-stone-950 shadow-card ring-1 ring-stone-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700"
+                              : "text-stone-600 hover:bg-stone-50 hover:text-stone-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white",
+                          ].join(" ")}
                         >
-                          Изменить
-                        </button>
-                        <button
-                          type="button"
-                          disabled={catalogMutating === `del-cluster-${c.id}`}
-                          onClick={() => void onDeleteCluster(c)}
-                          className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {!filteredCatalogClusters.length ? (
-                  <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
-                ) : null}
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
-                  Группы (ихтисос)
-                </label>
-                <select
-                  className={`mt-2 ${inputClass}`}
-                  value={catalogGroupClusterFilter === "all" ? "" : catalogGroupClusterFilter}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setCatalogGroupClusterFilter(v === "" ? "all" : Number(v));
-                  }}
-                  aria-label="Фильтр групп по кластеру"
-                >
-                  <option value="">Все кластеры</option>
-                  {clusters.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className={`mt-2 ${inputClass}`}
-                  placeholder="Поиск группы…"
-                  value={groupCatalogSearch}
-                  onChange={(e) => setGroupCatalogSearch(e.target.value)}
-                  aria-label="Поиск группы"
-                />
-                <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
-                  {filteredCatalogGroups.map((g) => {
-                    const c = clusterById.get(g.cluster_id);
-                    return (
-                      <li
-                        key={g.id}
-                        className="flex flex-col gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{g.code}</span> · {g.name}{" "}
-                          <span className="text-ink-500 dark:text-slate-400">
-                            {c ? c.name : `cluster ${g.cluster_id}`}
+                          <span
+                            className={[
+                              "grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[11px] font-black",
+                              active
+                                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200"
+                                : "bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400",
+                            ].join(" ")}
+                          >
+                            {item.short}
                           </span>
-                        </div>
-                        <div className="flex shrink-0 flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setGroupModal({
-                                id: g.id,
-                                cluster_id: g.cluster_id,
-                                code: g.code,
-                                name: g.name,
-                                sort_order: g.sort_order,
-                              })
-                            }
-                            className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
-                          >
-                            Изменить
-                          </button>
-                          <button
-                            type="button"
-                            disabled={catalogMutating === `del-group-${g.id}`}
-                            onClick={() => void onDeleteGroup(g)}
-                            className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
-                          >
-                            Удалить
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {!filteredCatalogGroups.length ? (
-                  <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
-                ) : null}
+                          <span className="text-base font-bold">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+
+            <div className="mt-6 rounded-2xl bg-stone-100/85 p-4 ring-1 ring-stone-200/80 dark:bg-slate-800/80 dark:ring-slate-700">
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
+                Tex stack
+              </div>
+              <div className="mt-2 text-sm font-semibold text-stone-800 dark:text-slate-100">
+                FastAPI, PostgreSQL, SQLAlchemy, React
+              </div>
+              <div className="mt-1 text-xs text-stone-600 dark:text-slate-400">
+                Excel import va test management bir panelga yig'ilgan.
               </div>
             </div>
-          </motion.div>
+          </motion.aside>
 
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-6 grid gap-6 lg:grid-cols-2"
-          >
-        <form className={sectionCardClass} onSubmit={onCreateCluster}>
-          <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить категорию (кластер)</h2>
-          <div className="mt-4 space-y-3">
-            <input
-              className={inputClass}
-              placeholder="Код (например: c6)"
-              value={clusterCode}
-              onChange={(e) => setClusterCode(e.target.value)}
-              required
-            />
-            <input
-              className={inputClass}
-              placeholder="Название"
-              value={clusterName}
-              onChange={(e) => setClusterName(e.target.value)}
-              required
-            />
-            <input
-              className={inputClass}
-              type="number"
-              placeholder="Порядок сортировки"
-              value={clusterSort}
-              onChange={(e) => setClusterSort(Number(e.target.value))}
-            />
-          </div>
-          <motion.button
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.985 }}
-            className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
-            type="submit"
-          >
-            Добавить категорию
-          </motion.button>
-        </form>
-
-        <form className={sectionCardClass} onSubmit={onCreateGroup}>
-          <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить подкатегорию (группу)</h2>
-          <div className="mt-4 space-y-3">
-            <select
-              className={inputClass}
-              value={groupClusterId || ""}
-              onChange={(e) => setGroupClusterId(Number(e.target.value))}
-              required
-            >
-              <option value="" disabled>
-                Выберите категорию
-              </option>
-              {clusters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.code})
-                </option>
-              ))}
-            </select>
-            <input
-              className={inputClass}
-              placeholder="Код группы"
-              value={groupCode}
-              onChange={(e) => setGroupCode(e.target.value)}
-              required
-            />
-            <input
-              className={inputClass}
-              placeholder="Название группы"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              required
-            />
-            <input
-              className={inputClass}
-              type="number"
-              placeholder="Порядок сортировки"
-              value={groupSort}
-              onChange={(e) => setGroupSort(Number(e.target.value))}
-            />
-          </div>
-          <motion.button
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.985 }}
-            className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
-            type="submit"
-          >
-            Добавить подкатегорию
-          </motion.button>
-        </form>
-          </motion.div>
-        </>
-      )}
-
-      {activeTab === "questions" && (
-        <>
-      <motion.form
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="mt-6 rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80"
-        onSubmit={onCreateQuestion}
-      >
-        <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Добавить вопрос</h2>
-        <select className={`mt-4 ${inputClass}`} value={questionPhase} onChange={(e) => setQuestionPhase(e.target.value as QuestionPhase)}>
-          <option value="readiness">Готовность</option>
-          <option value="main">Основной блок</option>
-        </select>
-
-        <textarea
-          className={`mt-3 min-h-28 ${inputClass}`}
-          placeholder="Текст вопроса (основной)"
-          value={questionText}
-          onChange={(e) => setQuestionText(e.target.value)}
-          required
-        />
-        <textarea
-          className={`mt-3 min-h-20 ${inputClass}`}
-          placeholder="Текст на втором языке (необязательно)"
-          value={questionTextAlt}
-          onChange={(e) => setQuestionTextAlt(e.target.value)}
-        />
-
-        <AnimatePresence mode="wait">
-          {questionPhase === "readiness" ? (
-            <motion.select
-              key="readiness-fields"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className={`mt-3 ${inputClass}`}
-              value={questionReadinessKind}
-              onChange={(e) => setQuestionReadinessKind(e.target.value as ReadinessKind)}
-            >
-              <option value="positive">Позитивный</option>
-              <option value="negative">Негативный</option>
-              <option value="emotional">Эмоциональный</option>
-            </motion.select>
-          ) : (
+          <div className="min-w-0">
             <motion.div
-              key="main-fields"
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mt-3 grid gap-3 sm:grid-cols-2"
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="relative overflow-hidden rounded-[2rem] border border-stone-200/80 bg-white/88 p-6 shadow-soft ring-1 ring-white/60 backdrop-blur dark:border-slate-700 dark:bg-slate-900/92 dark:ring-slate-700/60"
             >
-              <select
-                className={inputClass}
-                value={questionClusterId || ""}
-                onChange={(e) => setQuestionClusterId(Number(e.target.value))}
-                required
-              >
-                <option value="" disabled>
-                  Выберите категорию
-                </option>
-                {clusters.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
-              <select
-                className={inputClass}
-                value={questionGroupId || ""}
-                onChange={(e) => setQuestionGroupId(Number(e.target.value))}
-                required
-              >
-                <option value="" disabled>
-                  Выберите подкатегорию
-                </option>
-                {groupsForSelectedCluster.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name} ({g.code})
-                  </option>
-                ))}
-              </select>
+              <div className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-indigo-100/80 blur-3xl dark:bg-indigo-900/20" />
+              <div className="pointer-events-none absolute -bottom-16 -left-8 h-44 w-44 rounded-full bg-emerald-100/60 blur-3xl dark:bg-emerald-900/15" />
+
+              <div className="relative flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-sm font-black uppercase tracking-[0.18em] text-stone-500 dark:text-slate-400">
+                    {selectedSectionMeta.title}
+                  </div>
+                  <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-stone-950 dark:text-slate-50">
+                    {selectedSectionMeta.title}
+                  </h1>
+                  <p className="mt-3 max-w-3xl text-sm font-medium leading-relaxed text-stone-600 dark:text-slate-300">
+                    {selectedSectionMeta.subtitle}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="rounded-2xl bg-stone-100/90 px-4 py-2 text-sm font-bold text-stone-700 ring-1 ring-stone-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
+                    2026-27 o'quv yili
+                  </div>
+                  <ThemeToggle />
+                  <Link
+                    to="/"
+                    className="rounded-2xl bg-white/90 px-4 py-2 text-xs font-extrabold text-stone-900 ring-1 ring-stone-200/80 transition hover:-translate-y-0.5 hover:shadow-card dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                  >
+                    Bosh sayt
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => void Promise.all([loadAll(), loadOverview()])}
+                    className="rounded-2xl bg-stone-900 px-4 py-2 text-xs font-extrabold text-white transition hover:-translate-y-0.5 hover:shadow-card dark:bg-indigo-600"
+                  >
+                    Yangilash
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative mt-5 flex flex-wrap items-center gap-2 border-t border-stone-200/80 pt-4 dark:border-slate-700/70">
+                {busy || overviewLoading ? (
+                  <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-stone-700 ring-1 ring-stone-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                    Yuklanmoqda...
+                  </span>
+                ) : null}
+                <AnimatePresence mode="wait">
+                  {message ? (
+                    <motion.span
+                      key={`m-${message}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/50"
+                    >
+                      {message}
+                    </motion.span>
+                  ) : null}
+                </AnimatePresence>
+                <AnimatePresence mode="wait">
+                  {error ? (
+                    <motion.span
+                      key={`e-${error}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-900/50"
+                    >
+                      {error}
+                    </motion.span>
+                  ) : null}
+                </AnimatePresence>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
 
-        <input
-          className={`mt-3 ${inputClass}`}
-          type="number"
-          placeholder="Порядок сортировки"
-          value={questionSort}
-          onChange={(e) => setQuestionSort(Number(e.target.value))}
-        />
-
-        <motion.button
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.985 }}
-          className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
-          type="submit"
-        >
-          Добавить вопрос
-        </motion.button>
-      </motion.form>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.14, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className={`mt-6 ${sectionCardClass}`}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Вопросы</h2>
-            <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
-              Фильтры по фазе, кластеру и группе затрагивают только основной блок. Поиск — по тексту и номеру.
-            </p>
-          </div>
-          <div className="flex max-w-full flex-col gap-2 sm:max-w-2xl sm:flex-row sm:flex-wrap sm:items-end">
-            <select
-              className={inputClass + " min-w-[10rem] flex-1"}
-              value={listPhase}
-              onChange={(e) => setListPhase(e.target.value as typeof listPhase)}
-            >
-              <option value="all">Все фазы</option>
-              <option value="readiness">Готовность</option>
-              <option value="main">Основной блок</option>
-            </select>
-            <select
-              className={inputClass + " min-w-[10rem] flex-1"}
-              value={filterClusterId === "all" ? "" : filterClusterId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFilterClusterId(v === "" ? "all" : Number(v));
-              }}
-              aria-label="Фильтр по кластеру"
-            >
-              <option value="">Все кластеры</option>
-              {clusters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className={inputClass + " min-w-[10rem] flex-1"}
-              value={filterGroupId === "all" ? "" : filterGroupId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFilterGroupId(v === "" ? "all" : Number(v));
-              }}
-              disabled={filterClusterId !== "all" && !groupsForQuestionFilter.length}
-              aria-label="Фильтр по группе"
-            >
-              <option value="">Все группы</option>
-              {(filterClusterId === "all" ? groups : groupsForQuestionFilter).map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name} ({g.code})
-                </option>
-              ))}
-            </select>
-            <input
-              className={inputClass + " min-w-[12rem] flex-1"}
-              placeholder="Поиск по тексту или id"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 max-h-[520px] space-y-2 overflow-y-auto pr-1">
-          <AnimatePresence initial={false}>
-            {filteredQuestions.map((q) => (
-              <motion.div
-                key={q.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                className="flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-slate-50 to-white p-3 ring-1 ring-slate-200/70 dark:from-slate-800/90 dark:to-slate-900/90 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                    #{q.id} · {q.phase}
-                    {q.readiness_kind ? ` · ${q.readiness_kind}` : ""}
+            {activeSection === "dashboard" && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className={`mt-6 ${sectionCardClass}`}
+                >
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Asosiy ko'rsatkichlar</h2>
+                      <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
+                        Import qilingan katalog va test tizimi bo'yicha real vaqt statistikasi.
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink-900 dark:text-slate-100">{q.text}</div>
-                  <div className="mt-1 text-xs font-medium text-ink-500 dark:text-slate-400">
-                    {q.phase === "main" ? (
-                      <>
-                        {q.cluster_id != null ? clusterById.get(q.cluster_id)?.name ?? `кластер ${q.cluster_id}` : "—"}
-                        {" · "}
-                        {q.group_id != null ? groupById.get(q.group_id)?.name ?? `группа ${q.group_id}` : "—"}
-                      </>
+
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      {
+                        label: "Jami ixtisosliklar",
+                        value: overviewSpecialties.length,
+                        hint: `${dashboardRows.length} guruh kesimida`,
+                      },
+                      {
+                        label: "Muassasalar",
+                        value: overviewUniversities.length,
+                        hint: `${overviewFaculties.length} yo'nalish ajratilgan`,
+                      },
+                      {
+                        label: "Test savollari",
+                        value: adminStats?.total_questions ?? questions.length,
+                        hint: `Tayyorgarlik ${readinessQuestionsCount}, asosiy ${mainQuestionsCount}`,
+                      },
+                      {
+                        label: "Sessiyalar (bugun)",
+                        value: adminStats?.results_updated_last_24h ?? 0,
+                        hint: `Faol foydalanuvchi ${adminStats?.active_users_last_24h ?? 0}`,
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-[1.6rem] bg-gradient-to-br from-stone-50 to-white p-5 ring-1 ring-stone-200/70 dark:from-slate-800/90 dark:to-slate-900/95 dark:ring-slate-700"
+                      >
+                        <div className="text-[11px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
+                          {item.label}
+                        </div>
+                        <div className="mt-2 text-4xl font-extrabold tracking-tight text-stone-950 dark:text-slate-50">
+                          {item.value.toLocaleString()}
+                        </div>
+                        <div className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{item.hint}</div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,0.85fr)]">
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className={sectionCardClass}
+                  >
+                    <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Guruhlar bo'yicha ixtisosliklar</h2>
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-left">
+                        <thead>
+                          <tr className="border-b border-stone-200 text-[11px] font-black uppercase tracking-[0.14em] text-stone-500 dark:border-slate-700 dark:text-slate-400">
+                            <th className="px-4 py-3">Guruh</th>
+                            <th className="px-4 py-3">Yo'nalish nomi</th>
+                            <th className="px-4 py-3">Ixtisosliklar</th>
+                            <th className="px-4 py-3">Bepul o'rinlar</th>
+                            <th className="px-4 py-3">Muassasalar</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dashboardRows.map((row) => (
+                            <tr
+                              key={row.code}
+                              className="border-b border-stone-100 text-sm font-semibold text-stone-800 dark:border-slate-800 dark:text-slate-200"
+                            >
+                              <td className="px-4 py-3">
+                                <span className="inline-flex rounded-xl bg-indigo-100 px-2.5 py-1 text-xs font-black text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
+                                  {row.code}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">{row.name}</td>
+                              <td className="px-4 py-3 tabular-nums">{row.specialtiesCount.toLocaleString()}</td>
+                              <td className="px-4 py-3 tabular-nums">{row.freePlaces.toLocaleString()}</td>
+                              <td className="px-4 py-3 tabular-nums">{row.institutionsCount.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                          {!dashboardRows.length ? (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-10 text-center text-sm font-medium text-stone-500 dark:text-slate-400">
+                                Hali import qilingan ma'lumot topilmadi.
+                              </td>
+                            </tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className={sectionCardClass}
+                  >
+                    <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Sessiyalar holati</h2>
+                    <ul className="mt-4 space-y-2">
+                      {Object.entries(adminStats?.results_by_status ?? {})
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([status, count]) => (
+                          <li
+                            key={status}
+                            className="flex items-center justify-between rounded-2xl bg-stone-50/90 px-4 py-3 text-sm font-semibold ring-1 ring-stone-200/70 dark:bg-slate-800/80 dark:ring-slate-700"
+                          >
+                            <span>{RESULT_STATUS_LABELS[status] ?? status}</span>
+                            <span className="tabular-nums text-stone-500 dark:text-slate-400">{count}</span>
+                          </li>
+                        ))}
+                    </ul>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <div className="rounded-2xl bg-stone-50/90 p-4 ring-1 ring-stone-200/70 dark:bg-slate-800/80 dark:ring-slate-700">
+                        <div className="text-[11px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
+                          Yangi foydalanuvchilar
+                        </div>
+                        <div className="mt-2 text-2xl font-extrabold text-stone-950 dark:text-slate-50">
+                          {(adminStats?.users_created_last_7_days ?? 0).toLocaleString()}
+                        </div>
+                        <div className="mt-1 text-xs font-medium text-stone-500 dark:text-slate-400">Oxirgi 7 kun</div>
+                      </div>
+                      <div className="rounded-2xl bg-stone-50/90 p-4 ring-1 ring-stone-200/70 dark:bg-slate-800/80 dark:ring-slate-700">
+                        <div className="text-[11px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-slate-400">
+                          Saqlangan javoblar
+                        </div>
+                        <div className="mt-2 text-2xl font-extrabold text-stone-950 dark:text-slate-50">
+                          {(adminStats?.total_answers ?? 0).toLocaleString()}
+                        </div>
+                        <div className="mt-1 text-xs font-medium text-stone-500 dark:text-slate-400">Barcha sessiyalar bo'yicha</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </>
+            )}
+
+            {activeSection === "excel" && (
+              <AdminAcademicTab
+                inputClass={inputClass}
+                sectionCardClass={sectionCardClass}
+                mode="import"
+                title="Excel yuklash"
+                description="Excel faylni yuklang, kerak bo'lsa eski katalogni tozalang va yangi yozuvlarni bazaga import qiling."
+              />
+            )}
+
+            {activeSection === "specialties" && (
+              <AdminAcademicTab
+                inputClass={inputClass}
+                sectionCardClass={sectionCardClass}
+                mode="specialties"
+                title="Ixtisosliklar"
+                description="Ixtisosliklar ro'yxati, qidirish, qo'lda qo'shish va tahrirlash bo'limi."
+              />
+            )}
+
+            {activeSection === "universities" && (
+              <AdminAcademicTab
+                inputClass={inputClass}
+                sectionCardClass={sectionCardClass}
+                mode="universities"
+                title="Muassasalar"
+                description="Universitetlar va yo'nalishlar bo'yicha katalog, hududiy ma'lumotlar va tahrirlash."
+              />
+            )}
+
+            {activeSection === "questions" && (
+              <>
+                <motion.form
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="mt-6 rounded-3xl bg-white/80 p-6 shadow-soft ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-900/90 dark:ring-slate-700/80"
+                  onSubmit={onCreateQuestion}
+                >
+                  <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Savol qo'shish</h2>
+                  <select className={`mt-4 ${inputClass}`} value={questionPhase} onChange={(e) => setQuestionPhase(e.target.value as QuestionPhase)}>
+                    <option value="readiness">Tayyorgarlik bloki</option>
+                    <option value="main">Asosiy blok</option>
+                  </select>
+
+                  <textarea
+                    className={`mt-3 min-h-28 ${inputClass}`}
+                    placeholder="Savol matni"
+                    value={questionText}
+                    onChange={(e) => setQuestionText(e.target.value)}
+                    required
+                  />
+                  <textarea
+                    className={`mt-3 min-h-20 ${inputClass}`}
+                    placeholder="Ikkinchi tildagi matn (ixtiyoriy)"
+                    value={questionTextAlt}
+                    onChange={(e) => setQuestionTextAlt(e.target.value)}
+                  />
+
+                  <AnimatePresence mode="wait">
+                    {questionPhase === "readiness" ? (
+                      <motion.select
+                        key="readiness-fields"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className={`mt-3 ${inputClass}`}
+                        value={questionReadinessKind}
+                        onChange={(e) => setQuestionReadinessKind(e.target.value as ReadinessKind)}
+                      >
+                        <option value="positive">Pozitiv</option>
+                        <option value="negative">Negativ</option>
+                        <option value="emotional">Emotsional</option>
+                      </motion.select>
                     ) : (
-                      <>без кластера / группы</>
-                    )}{" "}
-                    · sort {q.sort_order}
-                    {q.option_labels?.length ? ` · варианты: ${q.option_labels.length}` : ""}
+                      <motion.div
+                        key="main-fields"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="mt-3 grid gap-3 sm:grid-cols-2"
+                      >
+                        <select
+                          className={inputClass}
+                          value={questionClusterId || ""}
+                          onChange={(e) => setQuestionClusterId(Number(e.target.value))}
+                          required
+                        >
+                          <option value="" disabled>
+                            Kategoriya tanlang
+                          </option>
+                          {clusters.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.code})
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className={inputClass}
+                          value={questionGroupId || ""}
+                          onChange={(e) => setQuestionGroupId(Number(e.target.value))}
+                          required
+                        >
+                          <option value="" disabled>
+                            Guruh tanlang
+                          </option>
+                          {groupsForSelectedCluster.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name} ({g.code})
+                            </option>
+                          ))}
+                        </select>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <input
+                    className={`mt-3 ${inputClass}`}
+                    type="number"
+                    placeholder="Sort order"
+                    value={questionSort}
+                    onChange={(e) => setQuestionSort(Number(e.target.value))}
+                  />
+
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
+                    type="submit"
+                  >
+                    Savolni saqlash
+                  </motion.button>
+                </motion.form>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className={`mt-6 ${sectionCardClass}`}
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Savollar ro'yxati</h2>
+                      <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
+                        Qidiruv, faza, kategoriya va guruh bo'yicha filterlash. Asosiy blok uchun cluster/group filtrlari ishlaydi.
+                      </p>
+                    </div>
+                    <div className="flex max-w-full flex-col gap-2 sm:max-w-2xl sm:flex-row sm:flex-wrap sm:items-end">
+                      <select
+                        className={inputClass + " min-w-[10rem] flex-1"}
+                        value={listPhase}
+                        onChange={(e) => setListPhase(e.target.value as typeof listPhase)}
+                      >
+                        <option value="all">Barcha fazalar</option>
+                        <option value="readiness">Tayyorgarlik</option>
+                        <option value="main">Asosiy blok</option>
+                      </select>
+                      <select
+                        className={inputClass + " min-w-[10rem] flex-1"}
+                        value={filterClusterId === "all" ? "" : filterClusterId}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFilterClusterId(v === "" ? "all" : Number(v));
+                        }}
+                        aria-label="Filter cluster"
+                      >
+                        <option value="">Barcha kategoriyalar</option>
+                        {clusters.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={inputClass + " min-w-[10rem] flex-1"}
+                        value={filterGroupId === "all" ? "" : filterGroupId}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFilterGroupId(v === "" ? "all" : Number(v));
+                        }}
+                        disabled={filterClusterId !== "all" && !groupsForQuestionFilter.length}
+                        aria-label="Filter group"
+                      >
+                        <option value="">Barcha guruhlar</option>
+                        {(filterClusterId === "all" ? groups : groupsForQuestionFilter).map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name} ({g.code})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className={inputClass + " min-w-[12rem] flex-1"}
+                        placeholder="Matn yoki id bo'yicha qidirish"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:justify-center">
-                  <button
-                    type="button"
-                    onClick={() => openEditor(q)}
-                    className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white shadow-card transition hover:brightness-110 dark:bg-indigo-600"
+
+                  <div className="mt-4 max-h-[520px] space-y-2 overflow-y-auto pr-1">
+                    <AnimatePresence initial={false}>
+                      {filteredQuestions.map((q) => (
+                        <motion.div
+                          key={q.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          className="flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-slate-50 to-white p-3 ring-1 ring-slate-200/70 dark:from-slate-800/90 dark:to-slate-900/90 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                              #{q.id} · {q.phase}
+                              {q.readiness_kind ? ` · ${q.readiness_kind}` : ""}
+                            </div>
+                            <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink-900 dark:text-slate-100">{q.text}</div>
+                            <div className="mt-1 text-xs font-medium text-ink-500 dark:text-slate-400">
+                              {q.phase === "main" ? (
+                                <>
+                                  {q.cluster_id != null ? clusterById.get(q.cluster_id)?.name ?? `кластер ${q.cluster_id}` : "—"}
+                                  {" · "}
+                                  {q.group_id != null ? groupById.get(q.group_id)?.name ?? `группа ${q.group_id}` : "—"}
+                                </>
+                              ) : (
+                                <>cluster / group ulanmagan</>
+                              )}{" "}
+                              · sort {q.sort_order}
+                              {q.option_labels?.length ? ` · variantlar: ${q.option_labels.length}` : ""}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:justify-center">
+                            <button
+                              type="button"
+                              onClick={() => openEditor(q)}
+                              className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white shadow-card transition hover:brightness-110 dark:bg-indigo-600"
+                            >
+                              Tahrirlash
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingId === q.id}
+                              onClick={() => void onDeleteQuestion(q)}
+                              className="rounded-xl bg-white px-4 py-2 text-xs font-extrabold text-rose-700 ring-1 ring-rose-200/90 transition hover:bg-rose-50 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/60 dark:hover:bg-rose-950/40"
+                            >
+                              {deletingId === q.id ? "O'chirilmoqda..." : "O'chirish"}
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    {!filteredQuestions.length ? (
+                      <div className="py-8 text-center text-sm font-medium text-ink-500 dark:text-slate-400">Hech narsa topilmadi.</div>
+                    ) : null}
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className={`mt-6 ${sectionCardClass}`}
+                >
+                  <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Test tuzilmasi</h2>
+                  <p className="mt-1 text-sm font-medium text-ink-600 dark:text-slate-300">
+                    Kategoriyalar va guruhlar katalogi. Savollar aynan shu ichki tuzilmaga ulanadi.
+                  </p>
+                  <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                        Kategoriyalar
+                      </label>
+                      <input
+                        className={`mt-2 ${inputClass}`}
+                        placeholder="Kategoriya qidirish..."
+                        value={catalogSearch}
+                        onChange={(e) => setCatalogSearch(e.target.value)}
+                        aria-label="Cluster search"
+                      />
+                      <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
+                        {filteredCatalogClusters.map((c) => (
+                          <li
+                            key={c.id}
+                            className="flex flex-col gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{c.code}</span> · {c.name}{" "}
+                              <span className="text-ink-500 dark:text-slate-400">sort {c.sort_order}</span>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setClusterModal({
+                                    id: c.id,
+                                    code: c.code,
+                                    name: c.name,
+                                    sort_order: c.sort_order,
+                                  })
+                                }
+                                className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
+                              >
+                                Tahrirlash
+                              </button>
+                              <button
+                                type="button"
+                                disabled={catalogMutating === `del-cluster-${c.id}`}
+                                onClick={() => void onDeleteCluster(c)}
+                                className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
+                              >
+                                O'chirish
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      {!filteredCatalogClusters.length ? (
+                        <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ma'lumot topilmadi.</div>
+                      ) : null}
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-slate-400">
+                        Guruhlar
+                      </label>
+                      <select
+                        className={`mt-2 ${inputClass}`}
+                        value={catalogGroupClusterFilter === "all" ? "" : catalogGroupClusterFilter}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCatalogGroupClusterFilter(v === "" ? "all" : Number(v));
+                        }}
+                        aria-label="Group filter by cluster"
+                      >
+                        <option value="">Barcha kategoriyalar</option>
+                        {clusters.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.code})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className={`mt-2 ${inputClass}`}
+                        placeholder="Guruh qidirish..."
+                        value={groupCatalogSearch}
+                        onChange={(e) => setGroupCatalogSearch(e.target.value)}
+                        aria-label="Group search"
+                      />
+                      <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-sm font-medium text-ink-800 dark:text-slate-200">
+                        {filteredCatalogGroups.map((g) => {
+                          const c = clusterById.get(g.cluster_id);
+                          return (
+                            <li
+                              key={g.id}
+                              className="flex flex-col gap-2 rounded-xl bg-slate-50/90 px-3 py-2 ring-1 ring-slate-200/70 dark:bg-slate-800/80 dark:ring-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <div className="min-w-0">
+                                <span className="font-mono text-xs text-ink-500 dark:text-slate-400">{g.code}</span> · {g.name}{" "}
+                                <span className="text-ink-500 dark:text-slate-400">
+                                  {c ? c.name : `cluster ${g.cluster_id}`}
+                                </span>
+                              </div>
+                              <div className="flex shrink-0 flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setGroupModal({
+                                      id: g.id,
+                                      cluster_id: g.cluster_id,
+                                      code: g.code,
+                                      name: g.name,
+                                      sort_order: g.sort_order,
+                                    })
+                                  }
+                                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-extrabold text-white dark:bg-indigo-600"
+                                >
+                                  Tahrirlash
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={catalogMutating === `del-group-${g.id}`}
+                                  onClick={() => void onDeleteGroup(g)}
+                                  className="rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-rose-700 ring-1 ring-rose-200/90 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/50"
+                                >
+                                  O'chirish
+                                </button>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {!filteredCatalogGroups.length ? (
+                        <div className="mt-3 text-sm font-medium text-ink-500 dark:text-slate-400">Ma'lumot topilmadi.</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.16, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="mt-6 grid gap-6 lg:grid-cols-2"
+                >
+                  <form className={sectionCardClass} onSubmit={onCreateCluster}>
+                    <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Kategoriya qo'shish</h2>
+                    <div className="mt-4 space-y-3">
+                      <input
+                        className={inputClass}
+                        placeholder="Kod"
+                        value={clusterCode}
+                        onChange={(e) => setClusterCode(e.target.value)}
+                        required
+                      />
+                      <input
+                        className={inputClass}
+                        placeholder="Nomi"
+                        value={clusterName}
+                        onChange={(e) => setClusterName(e.target.value)}
+                        required
+                      />
+                      <input
+                        className={inputClass}
+                        type="number"
+                        placeholder="Sort order"
+                        value={clusterSort}
+                        onChange={(e) => setClusterSort(Number(e.target.value))}
+                      />
+                    </div>
+                    <motion.button
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.985 }}
+                      className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
+                      type="submit"
+                    >
+                      Kategoriyani saqlash
+                    </motion.button>
+                  </form>
+
+                  <form className={sectionCardClass} onSubmit={onCreateGroup}>
+                    <h2 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Guruh qo'shish</h2>
+                    <div className="mt-4 space-y-3">
+                      <select
+                        className={inputClass}
+                        value={groupClusterId || ""}
+                        onChange={(e) => setGroupClusterId(Number(e.target.value))}
+                        required
+                      >
+                        <option value="" disabled>
+                          Kategoriya tanlang
+                        </option>
+                        {clusters.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.code})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className={inputClass}
+                        placeholder="Guruh kodi"
+                        value={groupCode}
+                        onChange={(e) => setGroupCode(e.target.value)}
+                        required
+                      />
+                      <input
+                        className={inputClass}
+                        placeholder="Guruh nomi"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        required
+                      />
+                      <input
+                        className={inputClass}
+                        type="number"
+                        placeholder="Sort order"
+                        value={groupSort}
+                        onChange={(e) => setGroupSort(Number(e.target.value))}
+                      />
+                    </div>
+                    <motion.button
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.985 }}
+                      className="mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-soft"
+                      type="submit"
+                    >
+                      Guruhni saqlash
+                    </motion.button>
+                  </form>
+                </motion.div>
+              </>
+            )}
+
+            {activeSection === "admins" && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className={`mt-6 ${sectionCardClass}`}
+                >
+                  <h2 className="text-xl font-extrabold text-ink-900 dark:text-slate-50">Super admin bo'limi</h2>
+                  <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-ink-600 dark:text-slate-300">
+                    Frontend struktura tayyor. Lekin repo ichida hali admin user modeli, JWT auth, audit log va
+                    `/admin/admins` CRUD endpointlari mavjud emas. Shu sabab bu bo'lim hozircha tayyor skelet va
+                    texnik checklist bilan ko'rsatilmoqda.
+                  </p>
+                </motion.div>
+
+                <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className={sectionCardClass}
                   >
-                    Изменить
-                  </button>
-                  <button
-                    type="button"
-                    disabled={deletingId === q.id}
-                    onClick={() => void onDeleteQuestion(q)}
-                    className="rounded-xl bg-white px-4 py-2 text-xs font-extrabold text-rose-700 ring-1 ring-rose-200/90 transition hover:bg-rose-50 disabled:opacity-50 dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-900/60 dark:hover:bg-rose-950/40"
+                    <h3 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">Kerakli backend qismlar</h3>
+                    <div className="mt-4 space-y-2">
+                      {[
+                        "admins jadvali va password_hash",
+                        "JWT login/logout va /auth/me",
+                        "super_admin va admin rollari",
+                        "audit_logs va CRUD action tracking",
+                        "soft delete va restore flow",
+                      ].map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-2xl bg-stone-50/90 px-4 py-3 text-sm font-semibold text-stone-800 ring-1 ring-stone-200/70 dark:bg-slate-800/80 dark:text-slate-200 dark:ring-slate-700"
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className={sectionCardClass}
                   >
-                    {deletingId === q.id ? "Удаление…" : "Удалить"}
-                  </button>
+                    <h3 className="text-lg font-extrabold text-ink-900 dark:text-slate-50">UI struktura</h3>
+                    <div className="mt-4 overflow-hidden rounded-2xl ring-1 ring-stone-200/80 dark:ring-slate-700">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-stone-50 text-[11px] font-black uppercase tracking-[0.14em] text-stone-500 dark:bg-slate-800 dark:text-slate-400">
+                          <tr>
+                            <th className="px-4 py-3">Maydon</th>
+                            <th className="px-4 py-3">Holat</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ["ID", "tayyor"],
+                            ["Ism", "tayyor"],
+                            ["Login yoki email", "tayyor"],
+                            ["Rol", "tayyor"],
+                            ["Status", "tayyor"],
+                            ["Parol yangilash", "backend kerak"],
+                          ].map(([field, status]) => (
+                            <tr key={field} className="border-t border-stone-100 dark:border-slate-800">
+                              <td className="px-4 py-3 font-semibold text-stone-800 dark:text-slate-200">{field}</td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-black text-stone-700 dark:bg-slate-800 dark:text-slate-300">
+                                  {status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          {!filteredQuestions.length ? (
-            <div className="py-8 text-center text-sm font-medium text-ink-500 dark:text-slate-400">Ничего не найдено.</div>
-          ) : null}
+              </>
+            )}
+          </div>
         </div>
-      </motion.div>
-        </>
-      )}
-
-      {activeTab === "academic" && <AdminAcademicTab inputClass={inputClass} sectionCardClass={sectionCardClass} />}
-
-      {activeTab === "specialties" && <AdminSpecialtiesTab inputClass={inputClass} sectionCardClass={sectionCardClass} />}
+      </div>
 
       <AnimatePresence>
         {editor ? (
